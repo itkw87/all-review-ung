@@ -1,0 +1,33 @@
+# --- Windows System Files ---
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# --- Build & Compiled (Backend) ---
+.gradle/
+build/
+bin/
+out/
+.idea/
+*.iml
+*.iws
+*.ipr
+HELP.md
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- Backend ---
+# 경로에 상관없이 application 설정을 숨깁니다.
+**/src/main/resources/application.yml
+**/src/main/resources/application.properties
+application.yml
+application.properties
+
+# --- Frontend (Vue.js) ---
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# --- etc ---
+.DS_Store
+*.log
