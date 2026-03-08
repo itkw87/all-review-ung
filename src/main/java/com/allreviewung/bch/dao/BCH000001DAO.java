@@ -1,6 +1,6 @@
-package com.allreviewung.backend.bch.dao;
+package com.allreviewung.bch.dao;
 
-import com.allreviewung.backend.bch.service.svo.BCH00000101IN;
+import com.allreviewung.bch.service.svo.BCH00000101IN;
 import org.apache.ibatis.annotations.Mapper;
 
 @Mapper

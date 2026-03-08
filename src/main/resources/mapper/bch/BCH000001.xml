@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
 
-<mapper namespace="com.allreviewung.backend.bch.dao.BCH000001DAO">
+<mapper namespace="com.allreviewung.bch.dao.BCH000001DAO">
 
-    <insert id="insertExtlRevw" parameterType="com.allreviewung.backend.bch.service.svo.BCH00000101IN">
+    <insert id="insertExtlRevw" parameterType="com.allreviewung.bch.service.svo.BCH00000101IN">
         INSERT
           INTO TB_ARVU_EXTL_REVW_L
              (

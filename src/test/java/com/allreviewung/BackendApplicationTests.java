@@ -1,4 +1,4 @@
-package com.allreviewung.backend;
+package com.allreviewung;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -1,6 +1,5 @@
-package com.allreviewung.backend.bch.service.svo;
+package com.allreviewung.bch.service.svo;
 
-import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 

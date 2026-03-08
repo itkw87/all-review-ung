@@ -1,7 +1,7 @@
-package com.allreviewung.backend.bch.service;
+package com.allreviewung.bch.service;
 
-import com.allreviewung.backend.bch.dao.BCH000001DAO;
-import com.allreviewung.backend.bch.service.svo.BCH00000101IN;
+import com.allreviewung.bch.dao.BCH000001DAO;
+import com.allreviewung.bch.service.svo.BCH00000101IN;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;

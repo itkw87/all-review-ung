@@ -1,6 +1,6 @@
-package com.allreviewung.backend.bch.service.cfg;
+package com.allreviewung.bch.service.cfg;
 
-import com.allreviewung.backend.bch.service.BCH00000101TSK;
+import com.allreviewung.bch.service.BCH00000101TSK;
 import lombok.RequiredArgsConstructor;
 /* ⚠️ 아래 2줄 경로가 핵심입니다. .job.Job 아닙니다! */
 import org.springframework.batch.core.Job;
