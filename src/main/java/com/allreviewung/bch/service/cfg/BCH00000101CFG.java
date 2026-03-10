@@ -20,7 +20,6 @@ public class BCH00000101CFG {
 
   @Bean
   public Job jobBCH000001(JobRepository jobRepository, Step stepBCH000001) {
-    // 부트 3.x(배치 5.x) 표준 문법입니다.
     return new JobBuilder("BCH00000101CFG", jobRepository)
             .start(stepBCH000001)
             .build();
