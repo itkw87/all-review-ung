@@ -3,7 +3,27 @@
 
 <mapper namespace="com.allreviewung.bch.dao.BCH000001DAO">
 
-    <insert id="insertExtlRevw" parameterType="com.allreviewung.bch.service.svo.BCH00000101IN">
+    <select id="selectNextScrpTrgt" resultType="com.allreviewung.bch.dto.BCH00000101DTO">
+        SELECT SCRP_TRGT_ID
+             , SRCH_KWD
+          FROM TB_ARVU_SCRP_TRGT_L
+         WHERE PROG_STAT_CD = '00'
+      ORDER BY REG_DTM ASC
+         LIMIT 1
+    </select>
+
+    <update id="updateScrpTrgtStat" parameterType="com.allreviewung.bch.service.svo.BCH00000101IN">
+        UPDATE TB_ARVU_SCRP_TRGT_L
+           SET PROG_STAT_CD = #{progStatCd}
+             , LST_SCRP_DTM = CASE WHEN #{progStatCd} = '02' THEN SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
+                                   ELSE                           LST_SCRP_DTM
+                               END
+             , CHNG_ID      = 'SYSTEM'
+             , CHNG_DTM     = SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
+         WHERE SCRP_TRGT_ID = #{scrpTrgtId}
+    </update>
+
+    <insert id="insertExtlRevw" parameterType="com.allreviewung.bch.service.svo.BCH00000102IN">
         INSERT
           INTO TB_ARVU_EXTL_REVW_L
              (
@@ -26,10 +46,10 @@
              , #{rtng}
              , #{placId}
              , #{fileGrpId}
-             , #{regId}
-             , #{regDtm}
-             , #{chngId}
-             , #{chngDtm}
+             , 'SYSTEM'
+             , SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
+             , 'SYSTEM'
+             , SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
              )
     </insert>
 
