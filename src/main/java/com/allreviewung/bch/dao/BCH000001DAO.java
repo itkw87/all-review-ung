@@ -26,6 +26,6 @@ public interface BCH000001DAO {
      * @param BCH00000102IN
      * @return int
      */
-    int insertExtlRevw(BCH00000102IN inParam);
+    int insertPlac(BCH00000102IN inParam);
 
 }

@@ -23,16 +23,19 @@
          WHERE SCRP_TRGT_ID = #{scrpTrgtId}
     </update>
 
-    <insert id="insertExtlRevw" parameterType="com.allreviewung.bch.service.svo.BCH00000102IN">
+    <insert id="insertPlac" parameterType="com.allreviewung.bch.service.svo.BCH00000102IN">
         INSERT
-          INTO TB_ARVU_EXTL_REVW_L
+          INTO TB_ARVU_PLAC_M
              (
-               EXTL_REVW_ID
+               PLAC_ID
+             , PLAC_NM
+             , EXTL_PLAC_ID
              , SORC_DVCD
-             , CNTN
-             , RTNG
-             , PLAC_ID
-             , FILE_GRP_ID
+             , CTGR_DVCD
+             , ADDR
+             , TEL_NO
+             , LTTD
+             , LGTD
              , REG_ID
              , REG_DTM
              , CHNG_ID
@@ -40,12 +43,15 @@
              )
         VALUES
              (
-               #{extlRevwId}
+               #{placId}
+             , #{placNm}
+             , #{extlPlacId}
              , #{sorcDvcd}
-             , #{cntn}
-             , #{rtng}
-             , #{placId}
-             , #{fileGrpId}
+             , #{ctgrDvcd}
+             , #{addr}
+             , #{telNo}
+             , #{lttd}
+             , #{lgtd}
              , 'SYSTEM'
              , SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
              , 'SYSTEM'

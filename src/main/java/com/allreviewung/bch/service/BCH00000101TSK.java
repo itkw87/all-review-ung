@@ -6,7 +6,9 @@ import com.allreviewung.bch.service.svo.BCH00000101IN;
 import com.allreviewung.bch.service.svo.BCH00000102IN;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -19,12 +21,12 @@ import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
+import org.springframework.dao.DuplicateKeyException;
 
 import java.time.Duration;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class BCH00000101TSK implements Tasklet {
@@ -34,109 +36,229 @@ public class BCH00000101TSK implements Tasklet {
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
-        // 1. 전담 정비사 호출 (드라이버 자동 세팅)
-        WebDriverManager.chromedriver().setup();
-
-        // 2. 크롬 옵션 설정 (보안 및 네트워크 설정)
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--remote-allow-origins=*");
-
-        // 3. 운전사(Driver) 대동해서 크롬 브라우저 실행!
-        WebDriver driver = new ChromeDriver(options);
-
-        try {
-
-            System.out.println(">>> 셀레니움 크롤링 시작합니다!");
-
+        WebDriver driver = null;
+        while (true) {
             BCH00000101DTO scrpTrgtDto = daoBCH000001.selectNextScrpTrgt();
 
             if (scrpTrgtDto == null) {
-                System.out.println(">>> 더 이상 수집할 대상이 없습니다.: ");
-                return RepeatStatus.FINISHED;
+                log.info(">>> [모두 완료] 더 이상 수집할 대상이 없습니다.");
+                break;
             }
 
-            BCH00000101IN updateParam = new BCH00000101IN();
-            updateParam.setScrpTrgtId(scrpTrgtDto.getScrpTrgtId());
-            // 진행상태 변경: 대기(00) -> 진행(01)
-            updateParam.setProgStatCd("01");
-            daoBCH000001.updateScrpTrgtStat(updateParam);
+            try {
+                log.info(">>> [" + scrpTrgtDto.getSrchKwd() + "] 수집을 시작합니다.");
 
-            // 네이버 지도로 이동
-            driver.get("https://map.naver.com/");
+                BCH00000101IN updateParam = new BCH00000101IN();
+                updateParam.setScrpTrgtId(scrpTrgtDto.getScrpTrgtId());
+                // 상태 업데이트: 대기(00) -> 진행(01)
+                updateParam.setProgStatCd("01");
+                daoBCH000001.updateScrpTrgtStat(updateParam);
 
-            // 검색창이 화면에 나타날 때까지 최대 10초간 대기(빈화면 긁음 방지)
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-            WebElement searchInput = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("input.input_search")));
+                // 드라이버 세팅 (키워드마다 새로 켜서 메모리 누수 방지)
 
-            searchInput.sendKeys(scrpTrgtDto.getSrchKwd());
-            searchInput.sendKeys(Keys.ENTER);
+                // WebDriverManager 사용하여 크롬 드라이버 자동 세팅
+                WebDriverManager.chromedriver().setup();
+                // 크롬 옵션 설정 (보안 및 네트워크 설정)
+                ChromeOptions options = new ChromeOptions();
+                options.addArguments("--remote-allow-origins=*");
+                driver = new ChromeDriver(options);
 
-            // [핵심] 검색 결과 Iframe으로 전환
-            wait.until(ExpectedConditions.presenceOfElementLocated(By.id("searchIframe")));
-            driver.switchTo().frame("searchIframe");
+                // 네이버 지도로 이동
+                driver.get("https://map.naver.com/");
 
-            // 장소 리스트 긁기
-            wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.UEzoS")));
-            List<WebElement> placList = driver.findElements(By.cssSelector("li.UEzoS"));
+                // 검색창이 화면에 나타날 때까지 최대 10초간 대기(빈화면 긁음 방지)
+                WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+                WebElement searchInput = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("input.input_search")));
+                searchInput.sendKeys(scrpTrgtDto.getSrchKwd());
+                searchInput.sendKeys(Keys.ENTER);
 
-            System.out.println(">>> [" + scrpTrgtDto.getSrchKwd() + "] 검색 결과: " + placList.size() + "건");
+                // [루프 시작] 페이지가 없을 때까지 반복
+                boolean hasNext = true;
+                int idx = 1;
+                while (hasNext) {
+                    // 루프 시작시 브라우저 메인 화면으로 이동
+                    driver.switchTo().defaultContent();
+                    // 브라우저 메인 화면에서 searchIframe 생성시 까지 대기
+                    wait.until(ExpectedConditions.presenceOfElementLocated(By.id("searchIframe")));
+                    // searchIframe으로 이동
+                    driver.switchTo().frame("searchIframe");
 
-            int idx = 0;
-            for (WebElement plac : placList) {
-                try {
-                    BCH00000102IN revwParam = new BCH00000102IN();
+                    // 첫 번째 장소 로딩될 때까지 잠시 대기
+                    wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("li.UEzoS")));
 
-                    // 가게 이름 (무조건 있다고 믿고 바로 findElement)
-                    String placeNm = plac.findElement(By.cssSelector(".TYaxT")).getText();
+                    // 스크랩 대상을 전부 브라우저에 뿌리기 위해 스크롤 내리기 작업 수행
+                    log.info(">>> 검색 결과 전체 로딩을 위해 스크롤을 내립니다...");
+                    WebElement scrollContainer = driver.findElement(By.cssSelector("#_pcmap_list_scroll_container"));
+                    long lastHeight = (long) ((JavascriptExecutor) driver).executeScript("return arguments[0].scrollHeight", scrollContainer);
 
-                    // ID 추출
-                    String realNaverId = "";
-                    try {
-                        WebElement linkElement = plac.findElement(By.cssSelector("a.YTJkH"));
-                        String href = linkElement.getAttribute("href");
-
-                        if (href != null && href.contains("/place/")) {
-                            // 정상적인 상세페이지 주소인 경우 숫자 ID 추출
-                            realNaverId = href.split("/place/")[1].split("\\?")[0];
-                        } else {
-                            // 만약 링크가 리스트 주소라면, 다른 속성(id 등)을 찾아야 합니다.
-                            // 네이버는 가끔 data-id 같은 속성에 ID를 넣어두기도 합니다.
-                            realNaverId = linkElement.getAttribute("data-id");
-                        }
-                    } catch (Exception e) {
-                        System.err.println(">>> ID 추출 실패: " + e.getMessage());
+                    while (true) {
+                        ((JavascriptExecutor) driver).executeScript("arguments[0].scrollTo(0, arguments[0].scrollHeight)", scrollContainer);
+                        Thread.sleep(1500); // 네이버 서버가 데이터를 줄 시간을 줌
+                        long newHeight = (long) ((JavascriptExecutor) driver).executeScript("return arguments[0].scrollHeight", scrollContainer);
+                        if (newHeight == lastHeight) break;
+                        lastHeight = newHeight;
                     }
-                    // 값 세팅
-                    revwParam.setExtlPlacId(realNaverId);
-                    revwParam.setPlacNm(placeNm);
-                    revwParam.setAddr("");
-                    revwParam.setSorcDvcd("NAV");
-                    revwParam.setCtgrDvcd("RESTAURANT");
-                    revwParam.setLttd(0.0);
-                    revwParam.setLgtd(0.0);
 
-                    // 4. DB 저장
-                    daoBCH000001.insertExtlRevw(revwParam);
+                    // 스크롤 수행 작업 종료후 리스트 확정
+                    List<WebElement> placList = driver.findElements(By.cssSelector("li.UEzoS"));
+                    log.info(">>> [스크롤 완료] 최종 검색 결과: " + placList.size() + "건");
 
-                    System.out.println(">>> [성공] ID: " + realNaverId + " | 가게명: " + placeNm);
+                    for (WebElement plac : placList) {
+                        try {
+                            BCH00000102IN insertParam = new BCH00000102IN();
 
-                } catch (Exception e) {
-                    System.err.println(">>> 데이터 세팅 중 오류: " + e.getMessage());
+                            // 가게 이름 먼저 추출
+                            WebElement titleEl = plac.findElement(By.cssSelector(".TYaxT"));
+                            String placeNm = titleEl.getText();
+
+                            // 클릭해서 URL 따오기
+                            String naverId = "";
+                            String addr = "";
+                            String telNo = "";
+                            try {
+                                try {
+                                    // 클릭 전 해당 요소가 화면에 보이도록 스크롤 (안전장치)
+                                    ((JavascriptExecutor) driver).executeScript("arguments[0].scrollIntoView(true);", titleEl);
+                                    Thread.sleep(500); // 스크롤 후 안정화 대기
+
+                                    // 자바스크립트로 강제 클릭!
+                                    ((JavascriptExecutor) driver).executeScript("arguments[0].click();", titleEl);
+                                } catch (Exception e) {
+                                    // 만약 이것도 안 되면 일반 클릭으로 재시도
+                                    titleEl.click();
+                                }
+
+                                // 클릭 후 상세 페이지 주소가 반영될 때까지 아주 잠깐 대기 (1초)
+                                Thread.sleep(1000);
+
+                                // [핵심] 프레임 이동: 리스트 프레임(searchIframe)에서 빠져나와 상세 프레임으로!
+                                driver.switchTo().defaultContent();
+                                wait.until(ExpectedConditions.presenceOfElementLocated(By.id("entryIframe")));
+                                driver.switchTo().frame("entryIframe");
+
+                                // ------------------------------------------------------------------
+                                // 주소(.pz7wy) 글자가 실제로 '눈에 보일 때까지' 기다리기 (최대 5초)
+                                // ------------------------------------------------------------------
+                                try {
+                                    wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".pz7wy")));
+                                } catch (Exception e) {
+                                    log.info(">>> [" + placeNm + "] 주소 로딩 시간이 너무 깁니다. 패스!");
+                                }
+
+                                // 현재 브라우저의 URL을 가져옴 (생략 가능하나 ID 추출 위해 유지)
+                                String currentUrl = driver.getCurrentUrl();
+                                if (currentUrl.contains("/place/")) {
+                                    String[] parts = currentUrl.split("/place/");
+                                    if (parts.length > 1) {
+                                        naverId = parts[1].split("/|\\?")[0];
+                                    }
+                                }
+
+                                // ------------------------------------------------------------------
+                                // 상세 정보(주소, 전화번호) 긁기 + 데이터 청소
+                                // ------------------------------------------------------------------
+                                List<WebElement> addrEls = driver.findElements(By.cssSelector(".pz7wy"));
+                                if (!addrEls.isEmpty()) {
+                                    // 텍스트를 가져온 뒤 '복사'라는 글자가 있으면 지우고 앞뒤 공백 제거
+                                    addr = addrEls.get(0).getText().trim();
+                                }
+
+                                List<WebElement> telEls = driver.findElements(By.cssSelector(".xlx7Q"));
+                                if (!telEls.isEmpty()) {
+                                    telNo = telEls.get(0).getText().trim();
+                                }
+
+                                // [필수] 다음 가게를 찾기 위해 다시 리스트 프레임(searchIframe)으로 복귀
+                                driver.switchTo().defaultContent();
+                                driver.switchTo().frame("searchIframe");
+                            } catch (Exception e) {
+                                log.error(">>> 상세 정보 수집 실패: " + placeNm + " | " + e.getMessage());
+                                // 에러가 나도 다음 루프를 위해 리스트 프레임으로 복귀 시도
+                                driver.switchTo().defaultContent();
+                                driver.switchTo().frame("searchIframe");
+                            }
+
+                            // ID가 없으면 저장하지 않고 스킵
+                            if (naverId == null || naverId.isEmpty()) {
+                                log.error(">>> [" + placeNm + "] ID를  찾을 수 없어 건너뜁니다.");
+                                continue;
+                            }
+
+                            if (addr == null || addr.isEmpty()) {
+                                log.error(">>> [" + placeNm + "] 주소를  찾을 수 없어 건너뜁니다.");
+                                continue;
+                            }
+                            // 데이터 세팅 및 DB 저장
+                            insertParam.setPlacId(idx);
+                            insertParam.setExtlPlacId(naverId);
+                            insertParam.setPlacNm(placeNm);
+                            insertParam.setAddr(addr);
+                            insertParam.setTelNo(telNo);
+                            insertParam.setSorcDvcd("NAV");
+                            insertParam.setCtgrDvcd("RST");
+
+                            try {
+                                daoBCH000001.insertPlac(insertParam);
+                                log.info(">>> [성공] ID: " + naverId + " | 가게명: " + placeNm);
+                            } catch (DuplicateKeyException e) {
+                                log.info(">>> [중복] 이미 수집된 가게입니다: " + placeNm);
+                            }
+
+                        } catch (Exception e) {
+                            log.error(">>> 루프 내부 오류 발생: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                        idx++;
+                    }
+
+                    try {
+                        driver.switchTo().defaultContent();
+                        driver.switchTo().frame("searchIframe");
+
+                        // '이전/다음' 버튼 역할을 하는 .eUTV2 클래스들을 모두 찾음
+                        List<WebElement> pageBtns = driver.findElements(By.cssSelector(".eUTV2"));
+
+                        // 리스트의 마지막 버튼이 '다음페이지' 버튼임
+                        if (!pageBtns.isEmpty()) {
+                            WebElement nextBtn = pageBtns.get(pageBtns.size() - 1);
+                            String isDisabled = nextBtn.getAttribute("aria-disabled");
+
+                            // 비활성화 상태가 아니면(false) 클릭해서 다음 페이지로!
+                            if ("false".equals(isDisabled)) {
+                                log.info(">>> 다음 페이지 버튼을 발견했습니다. 클릭합니다.");
+                                nextBtn.click();
+
+                                // 페이지가 완전히 로딩될 때까지 2~3초 넉넉히 대기
+                                Thread.sleep(2500);
+                            } else {
+                                log.info(">>> [알림] 마지막 페이지입니다. 수집을 종료합니다.");
+                                hasNext = false;
+                            }
+                        } else {
+                            log.info(">>> [알림] 페이지 버튼을 찾을 수 없어 종료합니다.");
+                            hasNext = false;
+                        }
+
+                    } catch (Exception e) {
+                        log.error(">>> 페이지 이동 중 오류 발생: " + e.getMessage());
+                        hasNext = false;
+                    }
+                }
+
+                // 진행상태 변경: 진행(01) -> 완료(02)
+                updateParam.setProgStatCd("02");
+                daoBCH000001.updateScrpTrgtStat(updateParam);
+                log.info(">>> [" + scrpTrgtDto.getSrchKwd() + "] 수집 완료!");
+            } catch (Exception e) {
+                log.error(">>> [" + scrpTrgtDto.getSrchKwd() + "] 처리 중 에러 발생: " + e.getMessage());
+                e.printStackTrace();
+            } finally {
+                if (driver != null) {
+                    // 한 키워드에 대한 크롤링 끝나면 브라우저 닫기
+                    driver.quit();
                 }
             }
-
-            // 진행상태 변경: 진행(01) -> 완료(02)
-            updateParam.setProgStatCd("02");
-            daoBCH000001.updateScrpTrgtStat(updateParam);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (driver != null) {
-                // 크롤링 후 빈화면 닫기(크롬창 다중 실행 방지)
-                driver.quit();
-            }
         }
-
         // 작업 완료 신호
         return RepeatStatus.FINISHED;
     }
