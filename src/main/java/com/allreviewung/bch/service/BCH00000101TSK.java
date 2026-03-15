@@ -20,8 +20,8 @@ import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
-import org.springframework.stereotype.Component;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Component;
 
 import java.time.Duration;
 import java.util.List;
@@ -74,7 +74,6 @@ public class BCH00000101TSK implements Tasklet {
 
                 // [루프 시작] 페이지가 없을 때까지 반복
                 boolean hasNext = true;
-                int idx = 1;
                 while (hasNext) {
                     // 루프 시작시 브라우저 메인 화면으로 이동
                     driver.switchTo().defaultContent();
@@ -107,12 +106,12 @@ public class BCH00000101TSK implements Tasklet {
                         try {
                             BCH00000102IN insertParam = new BCH00000102IN();
 
-                            // 가게 이름 먼저 추출
+//                            // 가게 이름 먼저 추출
                             WebElement titleEl = plac.findElement(By.cssSelector(".TYaxT"));
-                            String placeNm = titleEl.getText();
+//                            String placNm = titleEl.getText();
 
-                            // 클릭해서 URL 따오기
-                            String naverId = "";
+                            String placNm = "";       // 가게명
+                            String extlPlacId = "";   // 외부장소ID
                             String addr = "";
                             String telNo = "";
                             try {
@@ -142,7 +141,7 @@ public class BCH00000101TSK implements Tasklet {
                                 try {
                                     wait.until(ExpectedConditions.visibilityOfElementLocated(By.cssSelector(".pz7wy")));
                                 } catch (Exception e) {
-                                    log.info(">>> [" + placeNm + "] 주소 로딩 시간이 너무 깁니다. 패스!");
+                                    log.info(">>> [" + placNm + "] 주소 로딩 시간이 너무 깁니다. 패스!");
                                 }
 
                                 // 현재 브라우저의 URL을 가져옴 (생략 가능하나 ID 추출 위해 유지)
@@ -150,16 +149,19 @@ public class BCH00000101TSK implements Tasklet {
                                 if (currentUrl.contains("/place/")) {
                                     String[] parts = currentUrl.split("/place/");
                                     if (parts.length > 1) {
-                                        naverId = parts[1].split("/|\\?")[0];
+                                        extlPlacId = parts[1].split("/|\\?")[0];
                                     }
                                 }
+                                // ------------------------------------------------------------------
+                                // 상세 정보(장소명, 주소, 전화번호) 긁기 + 데이터 청소
+                                // ------------------------------------------------------------------
+                                List<WebElement> placNmEls = driver.findElements(By.cssSelector(".GHAhO"));
+                                if (!placNmEls.isEmpty()) {
+                                    placNm = placNmEls.get(0).getText().trim();
+                                }
 
-                                // ------------------------------------------------------------------
-                                // 상세 정보(주소, 전화번호) 긁기 + 데이터 청소
-                                // ------------------------------------------------------------------
                                 List<WebElement> addrEls = driver.findElements(By.cssSelector(".pz7wy"));
                                 if (!addrEls.isEmpty()) {
-                                    // 텍스트를 가져온 뒤 '복사'라는 글자가 있으면 지우고 앞뒤 공백 제거
                                     addr = addrEls.get(0).getText().trim();
                                 }
 
@@ -172,26 +174,25 @@ public class BCH00000101TSK implements Tasklet {
                                 driver.switchTo().defaultContent();
                                 driver.switchTo().frame("searchIframe");
                             } catch (Exception e) {
-                                log.error(">>> 상세 정보 수집 실패: " + placeNm + " | " + e.getMessage());
+                                log.error(">>> 상세 정보 수집 실패: " + placNm + " | " + e.getMessage());
                                 // 에러가 나도 다음 루프를 위해 리스트 프레임으로 복귀 시도
                                 driver.switchTo().defaultContent();
                                 driver.switchTo().frame("searchIframe");
                             }
 
                             // ID가 없으면 저장하지 않고 스킵
-                            if (naverId == null || naverId.isEmpty()) {
-                                log.error(">>> [" + placeNm + "] ID를  찾을 수 없어 건너뜁니다.");
+                            if (extlPlacId == null || extlPlacId.isEmpty()) {
+                                log.error(">>> [" + placNm + "] ID를  찾을 수 없어 건너뜁니다.");
                                 continue;
                             }
 
                             if (addr == null || addr.isEmpty()) {
-                                log.error(">>> [" + placeNm + "] 주소를  찾을 수 없어 건너뜁니다.");
+                                log.error(">>> [" + placNm + "] 주소를  찾을 수 없어 건너뜁니다.");
                                 continue;
                             }
                             // 데이터 세팅 및 DB 저장
-                            insertParam.setPlacId(idx);
-                            insertParam.setExtlPlacId(naverId);
-                            insertParam.setPlacNm(placeNm);
+                            insertParam.setExtlPlacId(extlPlacId);
+                            insertParam.setPlacNm(placNm);
                             insertParam.setAddr(addr);
                             insertParam.setTelNo(telNo);
                             insertParam.setSorcDvcd("NAV");
@@ -199,16 +200,15 @@ public class BCH00000101TSK implements Tasklet {
 
                             try {
                                 daoBCH000001.insertPlac(insertParam);
-                                log.info(">>> [성공] ID: " + naverId + " | 가게명: " + placeNm);
+                                log.info(">>> [성공] ID: " + extlPlacId + " | 가게명: " + placNm);
                             } catch (DuplicateKeyException e) {
-                                log.info(">>> [중복] 이미 수집된 가게입니다: " + placeNm);
+                                log.info(">>> [중복] 이미 수집된 가게입니다: " + placNm);
                             }
 
                         } catch (Exception e) {
                             log.error(">>> 루프 내부 오류 발생: " + e.getMessage());
                             e.printStackTrace();
                         }
-                        idx++;
                     }
 
                     try {

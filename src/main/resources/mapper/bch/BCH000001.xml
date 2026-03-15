@@ -43,7 +43,7 @@
              )
         VALUES
              (
-               #{placId}
+               NEXTVAL(SEQ_ARVU_PLAC_ID)
              , #{placNm}
              , #{extlPlacId}
              , #{sorcDvcd}
