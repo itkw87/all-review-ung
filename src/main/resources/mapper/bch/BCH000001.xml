@@ -8,7 +8,7 @@
              , SRCH_KWD
           FROM TB_ARVU_SCRP_TRGT_L
          WHERE PROG_STAT_CD = '00'
-      ORDER BY REG_DTM ASC
+      ORDER BY SCRP_TRGT_ID
          LIMIT 1
     </select>
 
