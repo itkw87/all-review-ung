@@ -1,92 +1,79 @@
 package com.allreviewung.bch.service;
 
 import com.allreviewung.bch.dao.BCH000001DAO;
-import com.allreviewung.bch.dto.BCH00000101DTO;
-import com.allreviewung.bch.service.svo.BCH00000101IN;
-import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
 import org.springframework.batch.core.StepContribution;
 import org.springframework.batch.core.scope.context.ChunkContext;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.repeat.RepeatStatus;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
-import java.util.Arrays;
+import java.net.URI;
 import java.util.List;
+import java.util.Map;
 
-@Slf4j
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class BCH00000101TSK implements Tasklet {
 
-    private final BCH00000101NAV navBCH00000101;
-
-    private final BCH00000101KKO kkoBCH00000101;
+    @Value("${public-data.api-key}")
+    private String serviceKey;
 
     private final BCH000001DAO daoBCH000001;
-    private static final List<String> EXCLUDE_CATEGORIES = Arrays.asList("카페", "디저트", "커피");
+    private final RestTemplate restTemplate = new RestTemplate();
 
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
+        int pageNo = 1;
+        int totalInserted = 0;
 
-        WebDriver driver = null;
         while (true) {
-            BCH00000101DTO scrpTrgtDto = daoBCH000001.selectNextScrpTrgt();
+            // 1. URI 조립
+            URI uri = UriComponentsBuilder.fromHttpUrl("https://apis.data.go.kr/1741000/general_restaurants/info")
+                    .queryParam("serviceKey", serviceKey)
+                    .queryParam("pageNo", pageNo)
+                    .queryParam("numOfRows", 100)
+                    .queryParam("returnType", "json")
+                    .queryParam("cond[OPN_ATMY_GRP_CD::EQ]", "3240000")
+                    .queryParam("cond[ROAD_NM_ADDR::LIKE]", "강일동")
+                    .build(true).toUri();
 
-            if (scrpTrgtDto == null) {
-                log.info(">>> [모두 완료] 더 이상 수집할 대상이 없습니다.");
+            // 2. 호출 및 파싱 (간단하게 Map으로 받기)
+            Map<String, Object> response = restTemplate.getForObject(uri, Map.class);
+
+            // API 응답 구조에 따라 items 꺼내기 (JSON 구조 확인 필요)
+            List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("items");
+
+            if (items == null || items.isEmpty()) {
+                log.info(">>> 수집할 데이터가 더 이상 없습니다.");
                 break;
             }
 
-            try {
-                log.info(">>> [{}] 전체 통합 수집을 시작합니다.", scrpTrgtDto.getSrchKwd());
+            // 3. DB 저장
+            for (Map<String, Object> item : items) {
+                String bplcNm = (String) item.get("BPLC_NM");
+                String addr = (String) item.get("ROAD_NM_ADDR");
 
-                // 상태 업데이트: 대기(00) -> 진행(01)
-                this.updateStatus(scrpTrgtDto.getScrpTrgtId(), "01");
+                // 검색 키워드: "강일동 가게명" (지도가 잘 알아먹게 조합)
+                String searchKwd = "강일동 " + bplcNm;
 
-                // 드라이버 세팅 (키워드마다 새로 켜서 메모리 누수 방지)
-
-                // WebDriverManager 사용하여 크롬 드라이버 자동 세팅
-                WebDriverManager.chromedriver().setup();
-                // 크롬 옵션 설정 (보안 및 네트워크 설정)
-                ChromeOptions options = new ChromeOptions();
-                options.addArguments("--remote-allow-origins=*");
-                driver = new ChromeDriver(options);
-
-                // 네이버맵 리뷰 수집
-//                navBCH00000101.collect(driver, scrpTrgtDto);
-
-                // 카카오맵 리뷰 수집
-                kkoBCH00000101.collect(driver, scrpTrgtDto);
-
-                // 진행상태 변경: 진행(01) -> 완료(02)
-                this.updateStatus(scrpTrgtDto.getScrpTrgtId(), "02");
-                log.info(">>> [" + scrpTrgtDto.getSrchKwd() + "] 수집 완료!");
-            } catch (Exception e) {
-                log.error(">>> [" + scrpTrgtDto.getSrchKwd() + "] 처리 중 에러 발생: " + e.getMessage());
-                e.printStackTrace();
-            } finally {
-                if (driver != null) {
-                    // 한 키워드에 대한 크롤링 끝나면 브라우저 닫기
-                    driver.quit();
-                }
+                // DAO 호출 (TB_ARVU_SCRP_TRGT_L에 Insert)
+//                daoBCH000001.insertScrpTrgt(searchKwd);
+                totalInserted++;
             }
-        }
-        // 작업 완료 신호
-        return RepeatStatus.FINISHED;
-    }
 
-    /**
-     * 상태 업데이트 공통 메서드
-     */
-    private void updateStatus(String id, String statCd) {
-        BCH00000101IN param = new BCH00000101IN();
-        param.setScrpTrgtId(id);
-        param.setProgStatCd(statCd);
-        daoBCH000001.updateScrpTrgtStat(param);
+            log.info(">>> {} 페이지 수집 완료 (누적 {}건)", pageNo, totalInserted);
+
+            if (items.size() < 100) break; // 마지막 페이지 체크
+            pageNo++;
+            Thread.sleep(500); // 서버 매너 타임
+        }
+
+        return RepeatStatus.FINISHED;
     }
 }

@@ -22,60 +22,60 @@ import java.util.List;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class BCH00000101KKO {
+public class BCH00000102NAV {
 
     private final BCH000001DAO daoBCH000001;
-    private static final List<String> EXCLUDE_CATEGORIES = Arrays.asList("카페", "디저트카페", "커피전문점", "간식", "제과,베이커리");
+    private static final List<String> EXCLUDE_CATEGORIES = Arrays.asList("카페", "디저트", "커피");
 
     public void collect(WebDriver webDriver, BCH00000101DTO scrpTrgtDto) {
 
         try {
-            // 카카오 지도로 이동
-            webDriver.get("https://map.kakao.com/");
+            // 네이버 지도로 이동
+            webDriver.get("https://map.naver.com/");
 
             // 검색창이 화면에 나타날 때까지 최대 10초간 대기(빈화면 긁음 방지)
             WebDriverWait wait = new WebDriverWait(webDriver, Duration.ofSeconds(10));
-            WebElement searchInput = wait.until(ExpectedConditions.presenceOfElementLocated(By.id("search.keyword.query")));
+            WebElement searchInput = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("input.input_search")));
             searchInput.sendKeys(scrpTrgtDto.getSrchKwd());
             searchInput.sendKeys(Keys.ENTER);
 
             // [루프 시작] 페이지가 없을 때까지 반복
             boolean hasNext = true;
             while (hasNext) {
-//                // 루프 시작시 브라우저 메인 화면으로 이동
-//                webDriver.switchTo().defaultContent();
-//                // 브라우저 메인 화면에서 searchIframe 생성시 까지 대기
-//                wait.until(ExpectedConditions.presenceOfElementLocated(By.id("searchIframe")));
-//                // searchIframe으로 이동
-//                webDriver.switchTo().frame("searchIframe");
+                // 루프 시작시 브라우저 메인 화면으로 이동
+                webDriver.switchTo().defaultContent();
+                // 브라우저 메인 화면에서 searchIframe 생성시 까지 대기
+                wait.until(ExpectedConditions.presenceOfElementLocated(By.id("searchIframe")));
+                // searchIframe으로 이동
+                webDriver.switchTo().frame("searchIframe");
 
                 // 첫 번째 장소 로딩될 때까지 잠시 대기
-                wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector(".PlaceItem")));
+                wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("li.UEzoS")));
 
                 // 스크랩 대상을 전부 브라우저에 뿌리기 위해 스크롤 내리기 작업 수행
                 log.info(">>> 검색 결과 전체 로딩을 위해 스크롤을 내립니다...");
-                WebElement scrollContainer = webDriver.findElement(By.id("info.body"));
+                WebElement scrollContainer = webDriver.findElement(By.cssSelector("#_pcmap_list_scroll_container"));
                 long lastHeight = (long) ((JavascriptExecutor) webDriver).executeScript("return arguments[0].scrollHeight", scrollContainer);
 
                 while (true) {
                     ((JavascriptExecutor) webDriver).executeScript("arguments[0].scrollTo(0, arguments[0].scrollHeight)", scrollContainer);
-                    Thread.sleep(1500); // 카카오 서버가 데이터를 줄 시간을 줌
+                    Thread.sleep(1500); // 네이버 서버가 데이터를 줄 시간을 줌
                     long newHeight = (long) ((JavascriptExecutor) webDriver).executeScript("return arguments[0].scrollHeight", scrollContainer);
                     if (newHeight == lastHeight) break;
                     lastHeight = newHeight;
                 }
 
                 // 스크롤 수행 작업 종료후 리스트 확정
-                List<WebElement> placList = webDriver.findElements(By.cssSelector("li.PlaceItem"));
-                log.info(">>> [KKO][스크롤 완료] 현재페이지 검색결과: " + placList.size() + "건");
+                List<WebElement> placList = webDriver.findElements(By.cssSelector("li.UEzoS"));
+                log.info(">>> [스크롤 완료] 현재페이지 검색결과: " + placList.size() + "건");
 
                 for (WebElement plac : placList) {
                     try {
                         BCH00000102IN insertParam = new BCH00000102IN();
 
-                        WebElement titleEl = plac.findElement(By.cssSelector("[data-id='name']"));
+                        WebElement titleEl = plac.findElement(By.cssSelector(".TYaxT"));
                         String title = titleEl.getText();
-                        String category = plac.findElement(By.cssSelector("[data-id='subcategory']")).getText();
+                        String category = plac.findElement(By.cssSelector(".KCMnt")).getText();
 
                         if (EXCLUDE_CATEGORIES.stream().anyMatch(word -> category.contains(word))) {
                             log.info(">>> [제외업종] {}은(는) {} 업종이라 제외합니다.", title, category);
@@ -89,8 +89,8 @@ public class BCH00000101KKO {
                         try {
                             try {
                                 // 클릭 전 해당 요소가 화면에 보이도록 스크롤 (안전장치)
-//                                ((JavascriptExecutor) webDriver).executeScript("arguments[0].scrollIntoView(true);", titleEl);
-//                                Thread.sleep(500); // 스크롤 후 안정화 대기
+                                ((JavascriptExecutor) webDriver).executeScript("arguments[0].scrollIntoView(true);", titleEl);
+                                Thread.sleep(500); // 스크롤 후 안정화 대기
 
                                 // 자바스크립트로 강제 클릭!
                                 ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", titleEl);

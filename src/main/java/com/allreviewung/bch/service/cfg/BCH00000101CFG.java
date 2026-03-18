@@ -1,6 +1,6 @@
 package com.allreviewung.bch.service.cfg;
 
-import com.allreviewung.bch.service.BCH00000101TSK;
+import com.allreviewung.bch.service.BCH00000102TSK;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.core.Job;
 import org.springframework.batch.core.Step;
@@ -15,7 +15,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 @RequiredArgsConstructor
 public class BCH00000101CFG {
 
-    private final BCH00000101TSK tskBCH00000101;
+    private final BCH00000102TSK tskBCH00000101;
 
     @Bean
     public Job jobBCH000001(JobRepository jobRepository, Step stepBCH000001) {
