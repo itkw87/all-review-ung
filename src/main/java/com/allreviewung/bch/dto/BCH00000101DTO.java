@@ -7,7 +7,8 @@ import lombok.Setter;
 @Setter
 public class BCH00000101DTO {
 
-    private String scrpTrgtId;    // 수집대상ID
-    private String srchKwd;       // 검색키워드
+    private String scrpTrgtId;        // 수집대상ID
+    private String pblcDataPlacNm;    // 공공데이터장소명
+    private String pblcDataAddr;      // 공공데이터주소
 
 }

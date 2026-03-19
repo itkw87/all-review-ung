@@ -2,7 +2,7 @@ package com.allreviewung.bch.service;
 
 import com.allreviewung.bch.dao.BCH000001DAO;
 import com.allreviewung.bch.dto.BCH00000101DTO;
-import com.allreviewung.bch.service.svo.BCH00000102IN;
+import com.allreviewung.bch.service.svo.BCH00000202IN;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -33,10 +33,10 @@ public class BCH00000102NAV {
             // 네이버 지도로 이동
             webDriver.get("https://map.naver.com/");
 
-            // 검색창이 화면에 나타날 때까지 최대 10초간 대기(빈화면 긁음 방지)
-            WebDriverWait wait = new WebDriverWait(webDriver, Duration.ofSeconds(10));
+            // 검색창이 화면에 나타날 때까지 최대 5초간 대기(빈화면 긁음 방지)
+            WebDriverWait wait = new WebDriverWait(webDriver, Duration.ofSeconds(5));
             WebElement searchInput = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("input.input_search")));
-            searchInput.sendKeys(scrpTrgtDto.getSrchKwd());
+//            searchInput.sendKeys(scrpTrgtDto.getSrchKwd());
             searchInput.sendKeys(Keys.ENTER);
 
             // [루프 시작] 페이지가 없을 때까지 반복
@@ -71,7 +71,7 @@ public class BCH00000102NAV {
 
                 for (WebElement plac : placList) {
                     try {
-                        BCH00000102IN insertParam = new BCH00000102IN();
+                        BCH00000202IN insertParam = new BCH00000202IN();
 
                         WebElement titleEl = plac.findElement(By.cssSelector(".TYaxT"));
                         String title = titleEl.getText();
@@ -124,6 +124,13 @@ public class BCH00000102NAV {
                                     extlPlacId = parts[1].split("/|\\?")[0];
                                 }
                             }
+
+                            // ID가 없으면 저장하지 않고 스킵
+                            if (extlPlacId == null || extlPlacId.isEmpty()) {
+                                log.error(">>> [" + placNm + "] ID를  찾을 수 없어 건너뜁니다.");
+                                continue;
+                            }
+
                             // ------------------------------------------------------------------
                             // 상세 정보(장소명, 주소, 전화번호) 긁기 + 데이터 청소
                             // ------------------------------------------------------------------
@@ -135,6 +142,11 @@ public class BCH00000102NAV {
                             List<WebElement> addrEls = webDriver.findElements(By.cssSelector(".pz7wy"));
                             if (!addrEls.isEmpty()) {
                                 addr = addrEls.get(0).getText().trim();
+                            }
+
+                            if (addr == null || addr.isEmpty()) {
+                                log.error(">>> [" + placNm + "] 주소를  찾을 수 없어 건너뜁니다.");
+                                continue;
                             }
 
                             List<WebElement> telEls = webDriver.findElements(By.cssSelector(".xlx7Q"));
@@ -152,16 +164,6 @@ public class BCH00000102NAV {
                             webDriver.switchTo().frame("searchIframe");
                         }
 
-                        // ID가 없으면 저장하지 않고 스킵
-                        if (extlPlacId == null || extlPlacId.isEmpty()) {
-                            log.error(">>> [" + placNm + "] ID를  찾을 수 없어 건너뜁니다.");
-                            continue;
-                        }
-
-                        if (addr == null || addr.isEmpty()) {
-                            log.error(">>> [" + placNm + "] 주소를  찾을 수 없어 건너뜁니다.");
-                            continue;
-                        }
                         // 데이터 세팅 및 DB 저장
                         insertParam.setExtlPlacId(extlPlacId);
                         insertParam.setPlacNm(placNm);
@@ -217,7 +219,7 @@ public class BCH00000102NAV {
                 }
             }
         } catch (Exception e) {
-            log.error(">>> [NAV 리뷰 수집중 오류 발생] 키워드: {} | 에러내용: {}", scrpTrgtDto.getSrchKwd(), e.getMessage());
+//            log.error(">>> [NAV 리뷰 수집중 오류 발생] 키워드: {} | 에러내용: {}", scrpTrgtDto.getSrchKwd(), e.getMessage());
         }
 
 

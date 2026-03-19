@@ -1,6 +1,7 @@
 package com.allreviewung.bch.service;
 
 import com.allreviewung.bch.dao.BCH000001DAO;
+import com.allreviewung.bch.service.svo.BCH00000101IN;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.StepContribution;
@@ -10,9 +11,8 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.util.UriComponentsBuilder;
 
-import java.net.URI;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
@@ -34,36 +34,72 @@ public class BCH00000101TSK implements Tasklet {
 
         while (true) {
             // 1. URI 조립
-            URI uri = UriComponentsBuilder.fromHttpUrl("https://apis.data.go.kr/1741000/general_restaurants/info")
-                    .queryParam("serviceKey", serviceKey)
-                    .queryParam("pageNo", pageNo)
-                    .queryParam("numOfRows", 100)
-                    .queryParam("returnType", "json")
-                    .queryParam("cond[OPN_ATMY_GRP_CD::EQ]", "3240000")
-                    .queryParam("cond[ROAD_NM_ADDR::LIKE]", "강일동")
-                    .build(true).toUri();
+            String url = "https://apis.data.go.kr/1741000/general_restaurants/info"
+                    + "?serviceKey=" + serviceKey
+                    + "&pageNo=" + pageNo
+                    + "&numOfRows=100"
+                    + "&returnType=json"
+                    + "&cond[OPN_ATMY_GRP_CD::EQ]=3240000"
+                    + "&cond[SALS_STTS_CD::EQ]=01";
 
-            // 2. 호출 및 파싱 (간단하게 Map으로 받기)
-            Map<String, Object> response = restTemplate.getForObject(uri, Map.class);
+            // 2. API 호출
+            Map<String, Object> responseMap = restTemplate.getForObject(url, Map.class);
 
-            // API 응답 구조에 따라 items 꺼내기 (JSON 구조 확인 필요)
-            List<Map<String, Object>> items = (List<Map<String, Object>>) response.get("items");
+            // 3. 계단 내려가기 (꺼내고, 꺼내고, 또 꺼내기)
+            Map<String, Object> response = (Map<String, Object>) responseMap.get("response");
+            Map<String, Object> body = (Map<String, Object>) response.get("body");
+            Map<String, Object> itemsWrapper = (Map<String, Object>) body.get("items");
 
+            // 4. 진짜 데이터 리스트(item) 꺼내기
+            List<Map<String, Object>> items = (List<Map<String, Object>>) itemsWrapper.get("item");
+
+            // 5. null 체크
             if (items == null || items.isEmpty()) {
-                log.info(">>> 수집할 데이터가 더 이상 없습니다.");
+                log.info(">>> 더 이상 데이터가 없습니다. 수집 종료.");
                 break;
             }
 
             // 3. DB 저장
             for (Map<String, Object> item : items) {
-                String bplcNm = (String) item.get("BPLC_NM");
-                String addr = (String) item.get("ROAD_NM_ADDR");
+                // 가게명
+                String pblcDataPlacNm = (String) item.get("BPLC_NM");
+                // 주소 (VARCHAR)
+                String pblcDataAddr = (String) item.get("ROAD_NM_ADDR");
+                // 전화번호 (VARCHAR)
+                String pblcDataTelNo = (item.get("TELNO") != null) ? (String) item.get("TELNO") : "";
+                // 위도
+                BigDecimal pblcDataLttd = null;
+                if (item.get("CRD_INFO_Y") != null && !String.valueOf(item.get("CRD_INFO_Y")).isEmpty()) {
+                    pblcDataLttd = new BigDecimal(String.valueOf(item.get("CRD_INFO_Y")));
+                }
+                // 경도
+                BigDecimal pblcDataLgtd = null;
+                if (item.get("CRD_INFO_X") != null && !String.valueOf(item.get("CRD_INFO_X")).isEmpty()) {
+                    pblcDataLgtd = new BigDecimal(String.valueOf(item.get("CRD_INFO_X")));
+                }
 
-                // 검색 키워드: "강일동 가게명" (지도가 잘 알아먹게 조합)
-                String searchKwd = "강일동 " + bplcNm;
+                log.info(">>> bplcNm : {}, addr : {}", pblcDataPlacNm, pblcDataAddr);
+                log.info(">>> item: {} \n", item);
 
-                // DAO 호출 (TB_ARVU_SCRP_TRGT_L에 Insert)
-//                daoBCH000001.insertScrpTrgt(searchKwd);
+                BCH00000101IN param = new BCH00000101IN();
+
+                // 관리번호
+                param.setPblcDataMngNo(String.valueOf(item.get("MNG_NO")));
+                // 검색 키워드
+                param.setSrchKwd(pblcDataPlacNm);
+                // 장소명
+                param.setPblcDataPlacNm(pblcDataPlacNm);
+                // 주소
+                param.setPblcDataAddr(pblcDataAddr);
+                // 전화번호
+                param.setPblcDataTelNo(pblcDataTelNo);
+                // 위도
+                param.setPblcDataLttd(pblcDataLttd);
+                // 경도
+                param.setPblcDataLgtd(pblcDataLgtd);
+
+                // 수집 대상 테이블에 공공데이터 음식점 정보 적재
+                daoBCH000001.insertScrpTrgt(param);
                 totalInserted++;
             }
 
@@ -77,3 +113,5 @@ public class BCH00000101TSK implements Tasklet {
         return RepeatStatus.FINISHED;
     }
 }
+
+

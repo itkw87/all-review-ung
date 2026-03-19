@@ -31,7 +31,7 @@ public class BCH000001 {
                     .addLong("time", System.currentTimeMillis())
                     .toJobParameters();
 
-            jobLauncher.run(jobBCH00000102, params); // 공공데이터 전용 Job
+            jobLauncher.run(jobBCH00000101, params); // 공공데이터 전용 Job
             return "공공데이터 수집 시작 성공";
         } catch (Exception e) {
             log.error("수집 실패", e);
@@ -54,7 +54,7 @@ public class BCH000001 {
                         .addLong("time", System.currentTimeMillis())
                         .toJobParameters();
 
-                jobLauncher.run(jobBCH00000101, params);
+                jobLauncher.run(jobBCH00000102, params);
                 return "배치 실행 성공";
 
             }

@@ -1,8 +1,7 @@
 package com.allreviewung.bch.service;
 
 import com.allreviewung.bch.dao.BCH000001DAO;
-import com.allreviewung.bch.dto.BCH00000101DTO;
-import com.allreviewung.bch.service.svo.BCH00000101IN;
+import com.allreviewung.bch.service.svo.BCH00000201IN;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,7 +15,9 @@ import org.springframework.batch.repeat.RepeatStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -34,46 +35,46 @@ public class BCH00000102TSK implements Tasklet {
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
 
         WebDriver driver = null;
-        while (true) {
-            BCH00000101DTO scrpTrgtDto = daoBCH000001.selectNextScrpTrgt();
+        try {
+            log.info(">>> 전체 수집을 시작합니다.");
 
-            if (scrpTrgtDto == null) {
-                log.info(">>> [모두 완료] 더 이상 수집할 대상이 없습니다.");
-                break;
-            }
+            // 상태 업데이트: 대기(00) -> 진행(01)
+//                this.updateStatus(scrpTrgtDto.getScrpTrgtId(), "01");
 
-            try {
-                log.info(">>> [{}] 전체 통합 수집을 시작합니다.", scrpTrgtDto.getSrchKwd());
+            // WebDriverManager 사용하여 크롬 드라이버 자동 세팅
+            WebDriverManager.chromedriver().setup();
 
-                // 상태 업데이트: 대기(00) -> 진행(01)
-                this.updateStatus(scrpTrgtDto.getScrpTrgtId(), "01");
+            ChromeOptions options = new ChromeOptions();
+            options.addArguments("--remote-allow-origins=*");
 
-                // 드라이버 세팅 (키워드마다 새로 켜서 메모리 누수 방지)
+            Map<String, Object> prefs = new HashMap<>();
 
-                // WebDriverManager 사용하여 크롬 드라이버 자동 세팅
-                WebDriverManager.chromedriver().setup();
-                // 크롬 옵션 설정 (보안 및 네트워크 설정)
-                ChromeOptions options = new ChromeOptions();
-                options.addArguments("--remote-allow-origins=*");
-                driver = new ChromeDriver(options);
+            prefs.put("profile.managed_default_content_settings.images", 2);      // 이미지 차단
+            prefs.put("profile.managed_default_content_settings.stylesheets", 2); // CSS(Style) 차단
+            prefs.put("profile.managed_default_content_settings.fonts", 2);       // 폰트 차단
 
-                // 네이버맵 리뷰 수집
-//                navBCH00000101.collect(driver, scrpTrgtDto);
+            options.setExperimentalOption("prefs", prefs);
+            // 아예 창을 안 띄우기
+            // options.addArguments("--headless");
 
-                // 카카오맵 리뷰 수집
-                kkoBCH00000101.collect(driver, scrpTrgtDto);
+            driver = new ChromeDriver(options);
 
-                // 진행상태 변경: 진행(01) -> 완료(02)
-                this.updateStatus(scrpTrgtDto.getScrpTrgtId(), "02");
-                log.info(">>> [" + scrpTrgtDto.getSrchKwd() + "] 수집 완료!");
-            } catch (Exception e) {
-                log.error(">>> [" + scrpTrgtDto.getSrchKwd() + "] 처리 중 에러 발생: " + e.getMessage());
-                e.printStackTrace();
-            } finally {
-                if (driver != null) {
-                    // 한 키워드에 대한 크롤링 끝나면 브라우저 닫기
-                    driver.quit();
-                }
+            // 네이버맵 리뷰 수집
+//                navBCH00000101.collect(driver);
+
+            // 카카오맵 리뷰 수집
+            kkoBCH00000101.collect(driver);
+
+            // 진행상태 변경: 진행(01) -> 완료(02)
+//                this.updateStatus(scrpTrgtDto.getScrpTrgtId(), "02");
+            log.info(">>> 전체수집 완료!");
+        } catch (Exception e) {
+            log.error(">>> 전체수집 중 에러 발생: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (driver != null) {
+                // 크롤링 끝나면 브라우저 닫기
+                driver.quit();
             }
         }
         // 작업 완료 신호
@@ -84,7 +85,7 @@ public class BCH00000102TSK implements Tasklet {
      * 상태 업데이트 공통 메서드
      */
     private void updateStatus(String id, String statCd) {
-        BCH00000101IN param = new BCH00000101IN();
+        BCH00000201IN param = new BCH00000201IN();
         param.setScrpTrgtId(id);
         param.setProgStatCd(statCd);
         daoBCH000001.updateScrpTrgtStat(param);

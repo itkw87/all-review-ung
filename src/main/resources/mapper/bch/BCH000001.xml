@@ -3,16 +3,50 @@
 
 <mapper namespace="com.allreviewung.bch.dao.BCH000001DAO">
 
-    <select id="selectNextScrpTrgt" resultType="com.allreviewung.bch.dto.BCH00000101DTO">
-        SELECT SCRP_TRGT_ID
+    <insert id="insertScrpTrgt" parameterType="com.allreviewung.bch.service.svo.BCH00000101IN">
+        INSERT
+          INTO TB_ARVU_SCRP_TRGT_L
+             (
+               SCRP_TRGT_ID
+             , PBLC_DATA_MNG_NO
              , SRCH_KWD
+             , PBLC_DATA_PLAC_NM
+             , PBLC_DATA_ADDR
+             , PBLC_DATA_TEL_NO
+             , PBLC_DATA_LTTD
+             , PBLC_DATA_LGTD
+             , REG_ID
+             , REG_DTM
+             , CHNG_ID
+             , CHNG_DTM
+             )
+        VALUES
+             (
+               NEXTVAL(SEQ_ARVU_SCRP_TRGT_ID)
+             , #{pblcDataMngNo}
+             , #{srchKwd}
+             , #{pblcDataPlacNm}
+             , #{pblcDataAddr}
+             , #{pblcDataTelNo}
+             , #{pblcDataLttd}
+             , #{pblcDataLgtd}
+             , 'SYSTEM'
+             , SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
+             , 'SYSTEM'
+             , SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
+             )
+    </insert>
+
+    <select id="selectScrpTrgtList" resultType="com.allreviewung.bch.dto.BCH00000101DTO">
+        SELECT SCRP_TRGT_ID
+             , PBLC_DATA_PLAC_NM
+             , PBLC_DATA_ADDR
           FROM TB_ARVU_SCRP_TRGT_L
          WHERE PROG_STAT_CD = '00'
       ORDER BY SCRP_TRGT_ID
-         LIMIT 1
     </select>
 
-    <update id="updateScrpTrgtStat" parameterType="com.allreviewung.bch.service.svo.BCH00000101IN">
+    <update id="updateScrpTrgtStat" parameterType="com.allreviewung.bch.service.svo.BCH00000201IN">
         UPDATE TB_ARVU_SCRP_TRGT_L
            SET PROG_STAT_CD = #{progStatCd}
              , LST_SCRP_DTM = CASE WHEN #{progStatCd} = '02' THEN SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
@@ -23,7 +57,7 @@
          WHERE SCRP_TRGT_ID = #{scrpTrgtId}
     </update>
 
-    <insert id="insertPlac" parameterType="com.allreviewung.bch.service.svo.BCH00000102IN">
+    <insert id="insertPlac" parameterType="com.allreviewung.bch.service.svo.BCH00000202IN">
         INSERT
           INTO TB_ARVU_PLAC_M
              (

@@ -5,7 +5,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class BCH00000102IN {
+public class BCH00000202IN {
 
     private int placId;           // 장소ID
     private String placNm;        // 장소명
