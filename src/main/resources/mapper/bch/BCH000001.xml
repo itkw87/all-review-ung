@@ -39,6 +39,7 @@
 
     <select id="selectScrpTrgtList" resultType="com.allreviewung.bch.dto.BCH00000101DTO">
         SELECT SCRP_TRGT_ID
+             , PBLC_DATA_MNG_NO
              , PBLC_DATA_PLAC_NM
              , PBLC_DATA_ADDR
           FROM TB_ARVU_SCRP_TRGT_L

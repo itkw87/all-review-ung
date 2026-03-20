@@ -2,6 +2,7 @@ package com.allreviewung.bch.service;
 
 import com.allreviewung.bch.dao.BCH000001DAO;
 import com.allreviewung.bch.dto.BCH00000101DTO;
+import com.allreviewung.bch.service.svo.BCH00000201IN;
 import com.allreviewung.bch.service.svo.BCH00000202IN;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,16 +45,20 @@ public class BCH00000102KKO {
             if (scrpTrgtList != null && !scrpTrgtList.isEmpty()) {
                 for (int i = 0; i < scrpTrgtList.size(); i++) {
                     BCH00000101DTO scrpTrgt = scrpTrgtList.get(i);
-                    log.info(">>> {} 번째 장소 찾는중...", i + 1);
-
-                    // 검색창 비우기
-                    searchInput.sendKeys(Keys.CONTROL + "a");
-                    searchInput.sendKeys(Keys.BACK_SPACE);
+                    double progress = (double)(i + 1) / scrpTrgtList.size() * 100;
+                    log.info(">>> 카카오맵 크롤링 진행률: {}% 진행건수: {}/{}건", String.format("%.2f", progress), i + 1, scrpTrgtList.size());
 
                     String[] pblcDataAddrArr = scrpTrgt.getPblcDataAddr().split(" ");
+
                     // 비교용 주소 (서울강동구천호동 형태)
-                    String tmpPblcDataAddr = (pblcDataAddrArr[0] + pblcDataAddrArr[1] + pblcDataAddrArr[2]).replace("서울특별시", "서울").replace(" ", "");
-                    keyWord = pblcDataAddrArr[1] + " " + scrpTrgt.getPblcDataPlacNm(); // 구명 + 가게명
+                    String tmpPblcDataAddr = "";
+                    if (pblcDataAddrArr.length >= 3) {
+                        tmpPblcDataAddr = pblcDataAddrArr[0] + pblcDataAddrArr[1] + pblcDataAddrArr[2];
+                    } else {
+                        tmpPblcDataAddr = String.join("", pblcDataAddrArr);
+                    }
+                    tmpPblcDataAddr = tmpPblcDataAddr.replace("서울특별시", "서울");
+                    keyWord = pblcDataAddrArr[1] + " " + scrpTrgt.getPblcDataPlacNm(); // 구명 + 장소명
 
                     searchInput.sendKeys(keyWord);
                     searchInput.sendKeys(Keys.ENTER);
@@ -61,6 +67,7 @@ public class BCH00000102KKO {
                     int currentPage = 1;
                     boolean hasNextPage = true;
                     boolean isMatched = false;
+                    boolean isDuplicate = false;
                     while (hasNextPage) {
                         // 일단 리스트가 나타날 때까지 아주 잠깐만 기다려줌 (로딩 시간)
 //                        Thread.sleep(1000);
@@ -81,44 +88,58 @@ public class BCH00000102KKO {
                         }
 
                         //검색 결과 리스트가 있는지 '안전하게' 확인
-                        List<WebElement> checkList = webDriver.findElements(By.cssSelector("li.PlaceItem"));
+                        List<WebElement> tmpPlacList = webDriver.findElements(By.cssSelector("li.PlaceItem"));
+                        List<WebElement> placList = new ArrayList<>();
 
-                        if (checkList.isEmpty()) {
-                            log.warn(">>> [KKO] 검색 결과가 없습니다. 다음 가게로 넘어갑니다. 키워드: {}", keyWord);
+                        // 제외 업종거르기
+                        for (WebElement tmpPlac : tmpPlacList) {
+                            String title = tmpPlac.findElement(By.cssSelector("[data-id='name']")).getText();
+                            String category = tmpPlac.findElement(By.cssSelector("[data-id='subcategory']")).getText();
+
+                            if (EXCLUDE_CATEGORIES.stream().anyMatch(word -> category.contains(word))) {
+                                log.info(">>> [제외업종] {}은(는) {} 업종이라 제외합니다.", title, category);
+                                continue;
+                            }
+                            // 제외업종 아닌 업종은 List에 추가
+                            placList.add(tmpPlac);
+                        }
+                        if (placList.isEmpty()) {
+                            log.warn(">>> [KKO] 유효한 검색 결과가 없습니다. (전부 제외업종이거나 결과 없음) 검색 키워드: {}, 수집대상ID: {}, 장소명: {}", keyWord, scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm());
                             hasNextPage = false;
                             continue;
                         }
 
-                        // 스크랩 대상을 전부 브라우저에 뿌리기 위해 스크롤 내리기 작업 수행
-                        log.info(">>> 검색 결과 전체 로딩을 위해 스크롤을 내립니다...");
+                        BCH00000201IN updateParam = new BCH00000201IN();
+                        try {
+                            updateParam.setScrpTrgtId(scrpTrgt.getScrpTrgtId());
+                            updateParam.setProgStatCd("03");
+                            // 진행 상태코드 변경 02: 네이버 완료 -> 03: 카카오 진행중
+                            int result = daoBCH000001.updateScrpTrgtStat(updateParam);
 
-                        // 스크롤 수행 작업 종료후 리스트 확정
-                        List<WebElement> placList = webDriver.findElements(By.cssSelector("li.PlaceItem"));
-                        log.info(">>> [KKO]현재페이지 검색결과: " + placList.size() + "건");
-
-                        if (placList.isEmpty()) {
-                            log.info(">>> [KKO] 검색결과가 없습니다. keyWord {}: ", keyWord);
-                            hasNextPage = false;
+                            if (result == 0) {
+                                throw new RuntimeException("DB에 업데이트 대상이 없습니다");
+                            }
+                            log.info(">>> [KKO] 진행상태 업데이트 완료. 수집대상ID: {}, 장소명: {}, 예정 진행상태 코드: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm(), updateParam.getProgStatCd());
+                        } catch (Exception e) {
+                            log.error(">>> [KKO] 진행상태 업데이트 실패. 수집대상ID: {}, 장소명: {}, 예정 진행상태 코드: {}, | 에러: {}\n 다음가게로 이동...", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm(), updateParam.getProgStatCd(), e.getMessage());
                             continue;
                         }
 
                         // ------------------------------------------------------------------
-                        // 상세정보 크롤링 후 INSERT
+                        // keyWord에 따른 검색결과 리스트 반복문으로 돌면서 비교 후 INSERT처리
                         // ------------------------------------------------------------------
                         for (WebElement plac : placList) {
                             String mainHandle = "";
                             try {
-                                BCH00000202IN insertParam = new BCH00000202IN();
+//                                String title = plac.findElement(By.cssSelector("[data-id='name']")).getText();
+//                                String category = plac.findElement(By.cssSelector("[data-id='subcategory']")).getText();
+//
+//                                if (EXCLUDE_CATEGORIES.stream().anyMatch(word -> category.contains(word))) {
+//                                    log.info(">>> [제외업종] {}은(는) {} 업종이라 제외합니다.", title, category);
+//                                    continue;
+//                                }
 
-                                String title = plac.findElement(By.cssSelector("[data-id='name']")).getText();
-                                String category = plac.findElement(By.cssSelector("[data-id='subcategory']")).getText();
-
-                                if (EXCLUDE_CATEGORIES.stream().anyMatch(word -> category.contains(word))) {
-                                    log.info(">>> [제외업종] {}은(는) {} 업종이라 제외합니다.", title, category);
-                                    continue;
-                                }
-
-                                String placNm = "";       // 가게명
+                                String placNm = "";       // 장소명
                                 String extlPlacId = "";   // 외부장소ID
                                 String addr = "";
                                 String telNo = "";
@@ -127,12 +148,11 @@ public class BCH00000102KKO {
                                     WebElement addrEl = plac.findElement(By.cssSelector("[data-id='address']"));
                                     String mainPageAddr = addrEl.getText();
 
-
                                     // 공공데이터 주소가 포함되어 있는지 확인 (공백 제거 후 비교)
                                     String cleanMainAddr = mainPageAddr.replace(" ", "");
                                     log.info(">>> 검색 키워드: {}, 장소명: {}, 카카오 주소: [{}], 공공데이터 주소: [{}]", keyWord, scrpTrgt.getPblcDataPlacNm(), mainPageAddr, tmpPblcDataAddr);
                                     if (!cleanMainAddr.contains(tmpPblcDataAddr)) {
-                                        log.error(">>> [패스] 주소 불일치 scrpTrgtId: {}", scrpTrgt.getScrpTrgtId());
+                                        log.warn(">>> [패스] 주소 불일치 scrpTrgtId: {}", scrpTrgt.getScrpTrgtId());
                                         continue; // 다음 가게로
                                     }
                                     log.info(">>> [성공] 주소 일치 상세정보 수집 시작");
@@ -169,7 +189,7 @@ public class BCH00000102KKO {
 
                                     // ID가 없으면 저장하지 않고 스킵
                                     if (extlPlacId.isEmpty()) {
-                                        log.error(">>> [" + placNm + "] 외부ID를  찾을 수 없어 건너뜁니다.");
+                                        log.error(">>> [" + scrpTrgt.getPblcDataPlacNm() + "] 외부ID를  찾을 수 없어 건너뜁니다.");
                                         continue;
                                     }
 
@@ -180,7 +200,7 @@ public class BCH00000102KKO {
 
                                     // 주소가 없으면 저장하지 않고 스킵
                                     if (addr.isEmpty()) {
-                                        log.error(">>> [" + placNm + "] 주소를 찾을 수 없어 건너뜁니다.");
+                                        log.error(">>> [" + scrpTrgt.getPblcDataPlacNm() + "] 주소를 찾을 수 없어 건너뜁니다.");
                                         continue;
                                     }
 
@@ -197,26 +217,47 @@ public class BCH00000102KKO {
                                     }
 
                                 } catch (Exception e) {
-                                    log.error(">>> 상세 정보 수집 실패: " + placNm + " | " + e.getMessage());
+                                    log.error(">>> 상세 정보 수집 실패: " + scrpTrgt.getPblcDataPlacNm() + " | " + e.getMessage());
                                 }
 
                                 // 데이터 세팅 및 DB 저장
+                                BCH00000202IN insertParam = new BCH00000202IN();
                                 insertParam.setExtlPlacId(extlPlacId);
                                 insertParam.setPlacNm(placNm);
                                 insertParam.setAddr(addr);
                                 insertParam.setTelNo(telNo);
                                 insertParam.setSorcDvcd("KKO");
                                 insertParam.setCtgrDvcd("RST");
-
                                 try {
-                                    daoBCH000001.insertPlac(insertParam);
+                                    int insertResult = daoBCH000001.insertPlac(insertParam);
+
+                                    if (insertResult == 0) {
+                                        throw new RuntimeException("INSERT 결과가 0건입니다.");
+                                    }
+                                    try {
+                                        updateParam.setProgStatCd("04");
+                                        // 진행 상태코드 변경 03: 카카오 진행중 -> 04: 전체 완료
+                                        int result = daoBCH000001.updateScrpTrgtStat(updateParam);
+
+                                        if (result == 0) {
+                                            throw new RuntimeException("DB에 업데이트 대상이 없습니다");
+                                        }
+                                        log.info(">>> [KKO] 진행상태 업데이트 완료. 수집대상ID: {}, 장소명: {}, 예정 진행상태 코드: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm(), updateParam.getProgStatCd());
+                                    } catch (Exception e) {
+                                        log.error(">>> [KKO] 진행상태 업데이트 실패. 수집대상ID: {}, 장소명: {}, 예정 진행상태 코드: {}, | 에러: {}\n 다음가게로 이동...", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm(), updateParam.getProgStatCd(), e.getMessage());
+                                        continue;
+                                    }
                                     isMatched = true;
-                                    log.info(">>> [성공] ID: " + extlPlacId + " | 가게명: " + placNm);
+                                    log.info(">>> [성공] 수집대상ID: {}, 관리번호: {}, 장소명: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataMngNo(), scrpTrgt.getPblcDataPlacNm());
                                 } catch (DuplicateKeyException e) {
-                                    isMatched = true;
-                                    log.info(">>> [중복] 이미 수집된 가게입니다: " + placNm);
+                                    isDuplicate = true;
+                                    log.info(">>> [중복] 이미 수집된 가게입니다: " + scrpTrgt.getPblcDataPlacNm());
+                                } catch (Exception e) {
+                                    log.error(">>> [KKO] DB 작업 중 예외 발생. ID: {} | 에러: {}", scrpTrgt.getScrpTrgtId(), e.getMessage());
+                                    continue; // 다음 가게로 이동
                                 }
-                                if (isMatched) break;
+
+                                if (isMatched || isDuplicate) break;
 
                             } catch (Exception e) {
                                 log.error(">>> 루프 내부 오류: " + e.getMessage());
@@ -247,8 +288,6 @@ public class BCH00000102KKO {
                                     // 버튼이 확실히 있을 때만 클릭
                                     ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", seeMoreEls.get(0));
                                     currentPage++;
-                                    // 페이지 전환 후 리스트 로딩 대기
-//                                    Thread.sleep(1000);
                                     wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
                                 }
                             }
@@ -264,8 +303,6 @@ public class BCH00000102KKO {
                                     log.info(">>> [KKO] {} 페이지 수집 완료 -> 다음 그룹으로 이동", currentPage);
                                     ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", nextBtn);
                                     currentPage++;
-                                    // 페이지 전환 후 리스트 로딩 대기
-//                                    Thread.sleep(1000);
                                     wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
                                 }
                             } else {
@@ -277,29 +314,25 @@ public class BCH00000102KKO {
 
                                 ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", nextNumBtn);
                                 currentPage++;
-                                // 페이지 전환 후 리스트 로딩 대기
-//                                Thread.sleep(1000);
                                 wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
                             }
-
-
                         } catch (Exception e) {
                             log.error(">>> 페이지 이동 중 오류 발생: " + e.getMessage());
                             hasNextPage = false;
                         }
-
                         if (isMatched) {
                             log.info(">>> [탈출] 매칭되는 가게를 찾았으므로 다음 페이지를 확인하지 않고 다음 키워드로 넘어갑니다.");
                             hasNextPage = false;
                             break;
                         }
                     }
+                    // 검색창 비우기
+                    searchInput.sendKeys(Keys.CONTROL + "a");
+                    searchInput.sendKeys(Keys.BACK_SPACE);
                 }
             }
         } catch (Exception e) {
-            log.error(">>> [NAV 리뷰 수집중 오류 발생] 키워드: {} | 에러내용: {}", keyWord, e.getMessage());
+            log.error(">>> [KKO 리뷰 수집중 오류 발생] 키워드: {} | 에러내용: {}", keyWord, e.getMessage());
         }
-
-
     }
 }

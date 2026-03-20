@@ -221,7 +221,5 @@ public class BCH00000102NAV {
         } catch (Exception e) {
 //            log.error(">>> [NAV 리뷰 수집중 오류 발생] 키워드: {} | 에러내용: {}", scrpTrgtDto.getSrchKwd(), e.getMessage());
         }
-
-
     }
 }

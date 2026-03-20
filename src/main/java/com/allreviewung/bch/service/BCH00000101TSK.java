@@ -63,9 +63,15 @@ public class BCH00000101TSK implements Tasklet {
             for (Map<String, Object> item : items) {
                 // 가게명
                 String pblcDataPlacNm = (String) item.get("BPLC_NM");
-                // 주소 (VARCHAR)
-                String pblcDataAddr = (String) item.get("ROAD_NM_ADDR");
-                // 전화번호 (VARCHAR)
+
+                // 도로명 주소
+                String roadNmAddr = (String) item.get("ROAD_NM_ADDR");
+                // 지번주소
+                String lotnoAddr = (String) item.get("LOTNO_ADDR");
+                // 주소 (도로명 주소 미존재시 지번주소 사용)
+                String pblcDataAddr = roadNmAddr != null && !roadNmAddr.isEmpty() ? roadNmAddr : lotnoAddr;
+
+                // 전화번호
                 String pblcDataTelNo = (item.get("TELNO") != null) ? (String) item.get("TELNO") : "";
                 // 위도
                 BigDecimal pblcDataLttd = null;

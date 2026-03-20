@@ -38,9 +38,6 @@ public class BCH00000102TSK implements Tasklet {
         try {
             log.info(">>> 전체 수집을 시작합니다.");
 
-            // 상태 업데이트: 대기(00) -> 진행(01)
-//                this.updateStatus(scrpTrgtDto.getScrpTrgtId(), "01");
-
             // WebDriverManager 사용하여 크롬 드라이버 자동 세팅
             WebDriverManager.chromedriver().setup();
 
@@ -48,7 +45,6 @@ public class BCH00000102TSK implements Tasklet {
             options.addArguments("--remote-allow-origins=*");
 
             Map<String, Object> prefs = new HashMap<>();
-
             prefs.put("profile.managed_default_content_settings.images", 2);      // 이미지 차단
             prefs.put("profile.managed_default_content_settings.stylesheets", 2); // CSS(Style) 차단
             prefs.put("profile.managed_default_content_settings.fonts", 2);       // 폰트 차단
@@ -64,9 +60,6 @@ public class BCH00000102TSK implements Tasklet {
 
             // 카카오맵 리뷰 수집
             kkoBCH00000101.collect(driver);
-
-            // 진행상태 변경: 진행(01) -> 완료(02)
-//                this.updateStatus(scrpTrgtDto.getScrpTrgtId(), "02");
             log.info(">>> 전체수집 완료!");
         } catch (Exception e) {
             log.error(">>> 전체수집 중 에러 발생: " + e.getMessage());
@@ -79,15 +72,5 @@ public class BCH00000102TSK implements Tasklet {
         }
         // 작업 완료 신호
         return RepeatStatus.FINISHED;
-    }
-
-    /**
-     * 상태 업데이트 공통 메서드
-     */
-    private void updateStatus(String id, String statCd) {
-        BCH00000201IN param = new BCH00000201IN();
-        param.setScrpTrgtId(id);
-        param.setProgStatCd(statCd);
-        daoBCH000001.updateScrpTrgtStat(param);
     }
 }
