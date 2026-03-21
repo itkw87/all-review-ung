@@ -91,23 +91,36 @@ public class BCH00000102KKO {
                         List<WebElement> tmpPlacList = webDriver.findElements(By.cssSelector("li.PlaceItem"));
                         List<WebElement> placList = new ArrayList<>();
 
-                        // 제외 업종거르기
+                        // 원본 검색 결과 개수 파악
+                        int totalFound = tmpPlacList.size();
+
+                        // 제외 업종 거르기
                         for (WebElement tmpPlac : tmpPlacList) {
                             String title = tmpPlac.findElement(By.cssSelector("[data-id='name']")).getText();
                             String category = tmpPlac.findElement(By.cssSelector("[data-id='subcategory']")).getText();
 
                             if (EXCLUDE_CATEGORIES.stream().anyMatch(word -> category.contains(word))) {
-                                log.info(">>> [제외업종] {}은(는) {} 업종이라 제외합니다.", title, category);
+                                log.info(">>> [제외업종] {} (업종: {}) -> 리스트에서 제외", title, category);
                                 continue;
                             }
-                            // 제외업종 아닌 업종은 List에 추가
                             placList.add(tmpPlac);
                         }
-                        if (placList.isEmpty()) {
-                            log.warn(">>> [KKO] 유효한 검색 결과가 없습니다. (전부 제외업종이거나 결과 없음) 검색 키워드: {}, 수집대상ID: {}, 장소명: {}", keyWord, scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm());
+
+                        // 결과 분석 및 로그 분리
+                        if (totalFound == 0) {
+                            // 애초에 검색된 게 0건인 경우
+                            log.warn(">>> [검색결과 없음] 키워드: '{}' 로 검색된 장소가 아예 없습니다. (ID: {})", keyWord, scrpTrgt.getScrpTrgtId());
                             hasNextPage = false;
                             continue;
                         }
+                        if (placList.isEmpty()) {
+                            // 검색은 됐는데(totalFound > 0), 필터링하니 남은 게 없는 경우
+                            log.warn(">>> [필터링 탈락] 검색결과는 {}건 있었으나, 모두 제외 업종이라 수집할 게 없습니다. 키워드: '{}'", totalFound, keyWord);
+                            hasNextPage = false;
+                            continue;
+                        }
+                        
+                        log.info(">>> [수집가능] 총 {}건 중 유효 데이터 {}건 확인 완료.", totalFound, placList.size());
 
                         BCH00000201IN updateParam = new BCH00000201IN();
                         try {
@@ -131,14 +144,6 @@ public class BCH00000102KKO {
                         for (WebElement plac : placList) {
                             String mainHandle = "";
                             try {
-//                                String title = plac.findElement(By.cssSelector("[data-id='name']")).getText();
-//                                String category = plac.findElement(By.cssSelector("[data-id='subcategory']")).getText();
-//
-//                                if (EXCLUDE_CATEGORIES.stream().anyMatch(word -> category.contains(word))) {
-//                                    log.info(">>> [제외업종] {}은(는) {} 업종이라 제외합니다.", title, category);
-//                                    continue;
-//                                }
-
                                 String placNm = "";       // 장소명
                                 String extlPlacId = "";   // 외부장소ID
                                 String addr = "";
@@ -179,19 +184,20 @@ public class BCH00000102KKO {
                                         extlPlacId = currentUrl.substring(currentUrl.lastIndexOf("/") + 1);
                                     }
 
+                                    // ID가 없으면 저장하지 않고 스킵
+                                    if (extlPlacId.isEmpty()) {
+                                        log.error(">>> [" + scrpTrgt.getPblcDataPlacNm() + "] 외부ID를  찾을 수 없어 건너뜁니다.");
+                                        continue;
+                                    }
+
                                     // ------------------------------------------------------------------
-                                    // 상세 정보(장소명, 주소, 전화번호) 긁기 + 데이터 청소
+                                    // 상세 정보(장소명, 전화번호) 긁기 + 데이터 청소
                                     // ------------------------------------------------------------------
                                     List<WebElement> placNmEls = webDriver.findElements(By.cssSelector(".tit_place"));
                                     if (!placNmEls.isEmpty()) {
                                         placNm = placNmEls.get(0).getText().trim();
                                     }
 
-                                    // ID가 없으면 저장하지 않고 스킵
-                                    if (extlPlacId.isEmpty()) {
-                                        log.error(">>> [" + scrpTrgt.getPblcDataPlacNm() + "] 외부ID를  찾을 수 없어 건너뜁니다.");
-                                        continue;
-                                    }
 
                                     List<WebElement> addrEls = webDriver.findElements(By.cssSelector(".unit_default:has(.ico_address) .txt_detail"));
                                     if (!addrEls.isEmpty()) {
@@ -256,9 +262,7 @@ public class BCH00000102KKO {
                                     log.error(">>> [KKO] DB 작업 중 예외 발생. ID: {} | 에러: {}", scrpTrgt.getScrpTrgtId(), e.getMessage());
                                     continue; // 다음 가게로 이동
                                 }
-
                                 if (isMatched || isDuplicate) break;
-
                             } catch (Exception e) {
                                 log.error(">>> 루프 내부 오류: " + e.getMessage());
                                 e.printStackTrace();
@@ -285,12 +289,32 @@ public class BCH00000102KKO {
                                 }
                                 else {
                                     log.info(">>> [KKO] 1페이지 완료 -> 장소 더보기 클릭");
-                                    // 버튼이 확실히 있을 때만 클릭
-                                    ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", seeMoreEls.get(0));
+                                    // [수정] 리스트에 담아두지 말고, 클릭 가능한 상태가 될 때까지 기다렸다가 '즉시' 클릭
+                                    wait.until(ExpectedConditions.elementToBeClickable(By.id("info.search.place.more"))).click();
                                     currentPage++;
                                     wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
                                 }
                             }
+
+                            if (currentPage == 1) {
+                                // 더보기 요소 새로 추출
+                                List<WebElement> freshSeeMoreEls = webDriver.findElements(By.id("info.search.place.more"));
+
+                                // 더보기 요소 비어있지 않고(존재하고), 화면에 보일 때만 실행
+                                if (!freshSeeMoreEls.isEmpty() && freshSeeMoreEls.get(0).isDisplayed()) {
+                                    log.info(">>> [KKO] 1페이지 완료 -> 장소 더보기 클릭");
+
+                                    // 새로 뽑은 리스트의 0번째 요소를 즉시 클릭
+                                    ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", freshSeeMoreEls.get(0));
+
+                                    currentPage++;
+                                    wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
+                                } else {
+                                    log.info(">>> [KKO] 더보기 버튼이 없거나 안 보임 (1페이지 종료)");
+                                    hasNextPage = false;
+                                }
+                            }
+
                             // 각 그룹의 마지막 페이지일 경우
                             else if (currentPage % 5 == 0) {
                                 WebElement nextBtn = webDriver.findElement(By.cssSelector("[id='info.search.page.next']"));

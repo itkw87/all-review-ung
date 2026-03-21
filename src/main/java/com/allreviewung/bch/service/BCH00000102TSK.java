@@ -56,10 +56,10 @@ public class BCH00000102TSK implements Tasklet {
             driver = new ChromeDriver(options);
 
             // 네이버맵 리뷰 수집
-//                navBCH00000101.collect(driver);
+            navBCH00000101.collect(driver);
 
             // 카카오맵 리뷰 수집
-            kkoBCH00000101.collect(driver);
+//            kkoBCH00000101.collect(driver);
             log.info(">>> 전체수집 완료!");
         } catch (Exception e) {
             log.error(">>> 전체수집 중 에러 발생: " + e.getMessage());
