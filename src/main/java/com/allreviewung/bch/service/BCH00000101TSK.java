@@ -61,6 +61,10 @@ public class BCH00000101TSK implements Tasklet {
 
             // 3. DB 저장
             for (Map<String, Object> item : items) {
+                // 관리번호
+                String mngNo = (String) item.get("MNG_NO");
+                // 카테고리명(업태명)
+                String ctgrNm = (String) item.get("BZSTAT_SE_NM");
                 // 가게명
                 String pblcDataPlacNm = (String) item.get("BPLC_NM");
 
@@ -73,6 +77,7 @@ public class BCH00000101TSK implements Tasklet {
 
                 // 전화번호
                 String pblcDataTelNo = (item.get("TELNO") != null) ? (String) item.get("TELNO") : "";
+
                 // 위도
                 BigDecimal pblcDataLttd = null;
                 if (item.get("CRD_INFO_Y") != null && !String.valueOf(item.get("CRD_INFO_Y")).isEmpty()) {
@@ -90,9 +95,9 @@ public class BCH00000101TSK implements Tasklet {
                 BCH00000101IN param = new BCH00000101IN();
 
                 // 관리번호
-                param.setPblcDataMngNo(String.valueOf(item.get("MNG_NO")));
-                // 검색 키워드
-                param.setSrchKwd(pblcDataPlacNm);
+                param.setPblcDataMngNo(mngNo);
+                // 카테고리명(업태명)
+                param.setCtgrNm(ctgrNm);
                 // 장소명
                 param.setPblcDataPlacNm(pblcDataPlacNm);
                 // 주소

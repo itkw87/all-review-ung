@@ -20,9 +20,10 @@ public interface BCH000001DAO {
 
     /*
      * 다음 수집 대상 조회
+     * @param List<String>
      * @return List<BCH00000101DTO>
      */
-    List<BCH00000101DTO> selectScrpTrgtList();
+    List<BCH00000101DTO> selectScrpTrgtList(List<String> statList);
 
     /*
      * 수집 대상 상태 변경

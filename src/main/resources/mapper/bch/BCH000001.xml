@@ -9,7 +9,7 @@
              (
                SCRP_TRGT_ID
              , PBLC_DATA_MNG_NO
-             , SRCH_KWD
+             , CTGR_NM
              , PBLC_DATA_PLAC_NM
              , PBLC_DATA_ADDR
              , PBLC_DATA_TEL_NO
@@ -24,7 +24,7 @@
              (
                NEXTVAL(SEQ_ARVU_SCRP_TRGT_ID)
              , #{pblcDataMngNo}
-             , #{srchKwd}
+             , #{ctgrNm}
              , #{pblcDataPlacNm}
              , #{pblcDataAddr}
              , #{pblcDataTelNo}
@@ -43,15 +43,20 @@
              , PBLC_DATA_PLAC_NM
              , PBLC_DATA_ADDR
           FROM TB_ARVU_SCRP_TRGT_L
-         WHERE PROG_STAT_CD = '00'
+         WHERE PROG_STAT_CD IN
+        <foreach collection="list" item ="progStatCd" open="(" separator="," close=")">
+            #{progStatCd}
+        </foreach>
       ORDER BY SCRP_TRGT_ID
     </select>
 
     <update id="updateScrpTrgtStat" parameterType="com.allreviewung.bch.service.svo.BCH00000201IN">
         UPDATE TB_ARVU_SCRP_TRGT_L
-           SET PROG_STAT_CD = #{progStatCd}
-             , LST_SCRP_DTM = CASE WHEN #{progStatCd} = '02' THEN SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
-                                   ELSE                           LST_SCRP_DTM
+           SET PROG_STAT_CD = CASE WHEN  PROG_STAT_CD IN ('00', '01') AND #{progStatCd} = '04' THEN '05'
+                                   ELSE                                                             #{progStatCd}
+                               END
+             , LST_SCRP_DTM = CASE WHEN #{progStatCd} = '01'                                  THEN SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
+                                   ELSE                                                            LST_SCRP_DTM
                                END
              , CHNG_ID      = 'SYSTEM'
              , CHNG_DTM     = SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)

@@ -55,12 +55,13 @@ public class BCH00000102TSK implements Tasklet {
 
             driver = new ChromeDriver(options);
 
-            // 네이버맵 리뷰 수집
-            navBCH00000101.collect(driver);
+            // 네이버맵 장소정보 수집
+            driver = navBCH00000101.collect(driver);
+            log.info(">>> 네이버 장소 정보 수집 종료!");
 
-            // 카카오맵 리뷰 수집
-//            kkoBCH00000101.collect(driver);
-            log.info(">>> 전체수집 완료!");
+            // 카카오맵 장소정보 수집(navBCH00000101가 새로만든 driver그대로 사용)
+            kkoBCH00000101.collect(driver);
+            log.info(">>> 카카오 장소 정보 수집 종료!");
         } catch (Exception e) {
             log.error(">>> 전체수집 중 에러 발생: " + e.getMessage());
             e.printStackTrace();

@@ -30,6 +30,10 @@ public class BCH00000102KKO {
     private static final List<String> EXCLUDE_CATEGORIES = Arrays.asList("카페", "디저트카페", "커피전문점", "간식", "제과,베이커리");
 
     public void collect(WebDriver webDriver) {
+        int totalCount = 0;
+        int insertCount = 0;
+        int skipCount = 0;
+        int duplicateCount = 0;
 
         String keyWord = "";
         try {
@@ -40,13 +44,14 @@ public class BCH00000102KKO {
             WebDriverWait wait = new WebDriverWait(webDriver, Duration.ofSeconds(5));
             WebElement searchInput = wait.until(ExpectedConditions.presenceOfElementLocated(By.cssSelector("[id='search.keyword.query']")));
 
-            List<BCH00000101DTO> scrpTrgtList = daoBCH000001.selectScrpTrgtList();
+            List<BCH00000101DTO> scrpTrgtList = daoBCH000001.selectScrpTrgtList(Arrays.asList("00", "01", "02", "03"));
 
             if (scrpTrgtList != null && !scrpTrgtList.isEmpty()) {
+                totalCount = scrpTrgtList.size();
                 for (int i = 0; i < scrpTrgtList.size(); i++) {
                     BCH00000101DTO scrpTrgt = scrpTrgtList.get(i);
-                    double progress = (double)(i + 1) / scrpTrgtList.size() * 100;
-                    log.info(">>> 카카오맵 크롤링 진행률: {}% 진행건수: {}/{}건", String.format("%.2f", progress), i + 1, scrpTrgtList.size());
+                    log.info("================================================================================");
+                    log.info("[ KKO ] 수집대상ID: {} | 장소명: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm());
 
                     String[] pblcDataAddrArr = scrpTrgt.getPblcDataAddr().split(" ");
 
@@ -60,9 +65,12 @@ public class BCH00000102KKO {
                     tmpPblcDataAddr = tmpPblcDataAddr.replace("서울특별시", "서울");
                     keyWord = pblcDataAddrArr[1] + " " + scrpTrgt.getPblcDataPlacNm(); // 구명 + 장소명
 
+                    double progress = (double)(i + 1) / scrpTrgtList.size() * 100;
+                    log.info(">>> 카카오맵 크롤링 진행률: {}%, 진행건수: {}/{}건, 검색 키워드: {}", String.format("%.2f", progress), i + 1, scrpTrgtList.size(), keyWord);
+
                     searchInput.sendKeys(keyWord);
                     searchInput.sendKeys(Keys.ENTER);
-                    Thread.sleep(1000); // 검색 결과 로딩 대기
+                    Thread.sleep(800); // 검색 결과 로딩 대기
 
                     int currentPage = 1;
                     boolean hasNextPage = true;
@@ -70,7 +78,7 @@ public class BCH00000102KKO {
                     boolean isDuplicate = false;
                     while (hasNextPage) {
                         // 일단 리스트가 나타날 때까지 아주 잠깐만 기다려줌 (로딩 시간)
-//                        Thread.sleep(1000);
+//                        Thread.sleep(800);
                         try {
                             wait.until(d -> {
                                 // 검색 결과 리스트가 1개라도 떴는지 확인
@@ -168,7 +176,7 @@ public class BCH00000102KKO {
                                     // 상세보기 클릭 (새 탭 열림)
                                     WebElement moreviewEl = plac.findElement(By.cssSelector("[data-id='moreview']"));
                                     ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", moreviewEl);
-                                    Thread.sleep(1000);
+                                    Thread.sleep(800);
 
                                     for (String handle : webDriver.getWindowHandles()) {
                                         if (!handle.equals(mainHandle)) {
@@ -254,9 +262,11 @@ public class BCH00000102KKO {
                                         continue;
                                     }
                                     isMatched = true;
+                                    insertCount++;
                                     log.info(">>> [성공] 수집대상ID: {}, 관리번호: {}, 장소명: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataMngNo(), scrpTrgt.getPblcDataPlacNm());
                                 } catch (DuplicateKeyException e) {
                                     isDuplicate = true;
+                                    duplicateCount++;
                                     log.info(">>> [중복] 이미 수집된 가게입니다: " + scrpTrgt.getPblcDataPlacNm());
                                 } catch (Exception e) {
                                     log.error(">>> [KKO] DB 작업 중 예외 발생. ID: {} | 에러: {}", scrpTrgt.getScrpTrgtId(), e.getMessage());
@@ -279,47 +289,25 @@ public class BCH00000102KKO {
                         // 페이징 처리
                         // ------------------------------------------------------------------
                         try {
-                            // 첫 페이지일 경우
+                            // [변경/통합] 1페이지일 때 처리 (중복되었던 두 블록을 하나로 합침)
                             if (currentPage == 1) {
-                                List<WebElement> seeMoreEls = webDriver.findElements(By.cssSelector("[id='info.search.place.more']"));
+                                List<WebElement> seeMoreEls = webDriver.findElements(By.id("info.search.place.more"));
 
-                                if (seeMoreEls.isEmpty() || !seeMoreEls.get(0).isDisplayed()) {
+                                if (!seeMoreEls.isEmpty() && seeMoreEls.get(0).isDisplayed()) {
+                                    log.info(">>> [KKO] 1페이지 완료 -> 장소 더보기 클릭");
+                                    // [변경] 일반 클릭 대신 JS 강제 클릭으로 에러 방지
+                                    ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", seeMoreEls.get(0));
+                                    currentPage++;
+                                    Thread.sleep(800); // [추가] 리스트 로딩 대기
+                                } else {
                                     log.info(">>> [KKO] 1페이지가 끝입니다. 다음 가게로 이동.");
                                     hasNextPage = false;
                                 }
-                                else {
-                                    log.info(">>> [KKO] 1페이지 완료 -> 장소 더보기 클릭");
-                                    // [수정] 리스트에 담아두지 말고, 클릭 가능한 상태가 될 때까지 기다렸다가 '즉시' 클릭
-                                    wait.until(ExpectedConditions.elementToBeClickable(By.id("info.search.place.more"))).click();
-                                    currentPage++;
-                                    wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
-                                }
                             }
-
-                            if (currentPage == 1) {
-                                // 더보기 요소 새로 추출
-                                List<WebElement> freshSeeMoreEls = webDriver.findElements(By.id("info.search.place.more"));
-
-                                // 더보기 요소 비어있지 않고(존재하고), 화면에 보일 때만 실행
-                                if (!freshSeeMoreEls.isEmpty() && freshSeeMoreEls.get(0).isDisplayed()) {
-                                    log.info(">>> [KKO] 1페이지 완료 -> 장소 더보기 클릭");
-
-                                    // 새로 뽑은 리스트의 0번째 요소를 즉시 클릭
-                                    ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", freshSeeMoreEls.get(0));
-
-                                    currentPage++;
-                                    wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
-                                } else {
-                                    log.info(">>> [KKO] 더보기 버튼이 없거나 안 보임 (1페이지 종료)");
-                                    hasNextPage = false;
-                                }
-                            }
-
-                            // 각 그룹의 마지막 페이지일 경우
+                            // [변경] 각 그룹의 마지막 페이지(5, 10...) 이동 시 JS 클릭 적용
                             else if (currentPage % 5 == 0) {
-                                WebElement nextBtn = webDriver.findElement(By.cssSelector("[id='info.search.page.next']"));
+                                WebElement nextBtn = webDriver.findElement(By.id("info.search.page.next"));
 
-                                // 진짜 마지막 그룹에서 disabled되는지 체크 필요
                                 if (nextBtn.getAttribute("class").contains("disabled")) {
                                     log.info(">>> [KKO] 마지막 페이지입니다. 수집 종료.");
                                     hasNextPage = false;
@@ -327,18 +315,19 @@ public class BCH00000102KKO {
                                     log.info(">>> [KKO] {} 페이지 수집 완료 -> 다음 그룹으로 이동", currentPage);
                                     ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", nextBtn);
                                     currentPage++;
-                                    wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
+                                    Thread.sleep(800);
                                 }
-                            } else {
+                            }
+                            // [변경] 일반 번호 클릭 시에도 JS 클릭 적용
+                            else {
                                 int nextTargetNo = (currentPage % 5) + 1;
                                 String nextId = "info.search.page.no" + nextTargetNo;
 
-                                WebElement nextNumBtn = webDriver.findElement(By.cssSelector("[id='" + nextId + "']"));
+                                WebElement nextNumBtn = webDriver.findElement(By.id(nextId));
                                 log.info(">>> [KKO] {} 페이지 수집 완료 -> 다음 페이지로 이동", currentPage);
-
                                 ((JavascriptExecutor) webDriver).executeScript("arguments[0].click();", nextNumBtn);
                                 currentPage++;
-                                wait.until(ExpectedConditions.presenceOfAllElementsLocatedBy(By.cssSelector("li.PlaceItem")));
+                                Thread.sleep(800);
                             }
                         } catch (Exception e) {
                             log.error(">>> 페이지 이동 중 오류 발생: " + e.getMessage());
@@ -349,14 +338,27 @@ public class BCH00000102KKO {
                             hasNextPage = false;
                             break;
                         }
+                    } // while (hasNextPage)
+                    if (!isMatched && !isDuplicate) {
+                        skipCount++;
                     }
                     // 검색창 비우기
                     searchInput.sendKeys(Keys.CONTROL + "a");
                     searchInput.sendKeys(Keys.BACK_SPACE);
+                    log.info("================================================================================\n");
                 }
             }
         } catch (Exception e) {
             log.error(">>> [KKO 리뷰 수집중 오류 발생] 키워드: {} | 에러내용: {}", keyWord, e.getMessage());
+        } finally {
+            // [추가 6] 작업이 끝나면 무조건 리포트 출력
+            log.info("==========================================");
+            log.info(">>> [KKO 수집 최종 리포트]");
+            log.info(">>> 1. 전체 대상: {}건", totalCount);
+            log.info(">>> 2. Insert 성공: {}건", insertCount);
+            log.info(">>> 3. 스킵(수집불가): {}건", skipCount);
+            log.info(">>> 4. 기타(중복 등): {}건", duplicateCount);
+            log.info("==========================================");
         }
     }
 }

@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 public class BCH00000101IN {
 
     private String pblcDataMngNo;       // 공공데이터 관리번호
-    private String srchKwd;             // 검색키워드
+    private String ctgrNm;             // 카테고리명(업태명)
     private String pblcDataPlacNm;      // 공공데이터 가게명
     private String pblcDataAddr;        // 공공데이터 주소
     private String pblcDataTelNo;       // 공공데이터 전화번호
