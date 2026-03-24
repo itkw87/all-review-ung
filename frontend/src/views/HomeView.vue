@@ -1,24 +1,3 @@
-<script setup>
-// 🦉 기현님의 정교한 데이터 로직 (Trust Score 반영)
-const rankings = {
-  overall: [
-    { place: '제주 꽁치마을', category: '음식점', naverRate: 4.7, kakaoRate: 4.5, trustScore: 96, count: 210, photo: 'https://images.unsplash.com/photo-1512132411229-c30391241dd8?q=80&w=400&auto=format&fit=crop', description: '비린내 제로! 꽁치킬러들도 인정한 전국구 맛집.' },
-    { place: '노트북 뷰 카페', category: '카페', naverRate: 4.85, kakaoRate: 4.2, trustScore: 92, count: 152, photo: 'https://img1.daumcdn.net/thumb/R1280x0.fjpg/?fname=http://t1.daumcdn.net/brunch/service/user/cEb3/image/yIY5O1qAPgCBTrMwl1Myx1kiC7g.jpg', description: '카공족들의 성지, 압도적인 뷰와 콘센트 보유량으로 통합 1위!' },
-    { place: '순한맛 천국', category: '음식점', naverRate: 4.3, kakaoRate: 4.8, trustScore: 89, count: 189, photo: 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?q=80&w=400&auto=format&fit=crop', description: '위장보호가들의 안식처. 파모티딘 없이 즐기는 최고의 한 끼.' }
-  ],
-  restaurant: [
-    { name: '꽁치킬러', place: '제주 꽁치마을', naverRate: 4.7, kakaoRate: 4.5, trustScore: 96, count: 210, photo: 'https://images.unsplash.com/photo-1512132411229-c30391241dd8?q=80&w=400&auto=format&fit=crop', quote: '꽁치조림 레시피 공유합니다.' },
-    { name: '진라면순한맛', place: '순한맛 천국', naverRate: 4.3, kakaoRate: 4.8, trustScore: 89, photo: 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?q=80&w=400&auto=format&fit=crop', quote: '맵지 않은 맛집 전문가.' },
-    { name: '위장보호가', place: '편안한 식탁', naverRate: 4.1, kakaoRate: 4.3, trustScore: 82, photo: 'https://images.unsplash.com/photo-1512132411229-c30391241dd8?q=80&w=400&auto=format&fit=crop', quote: '파모티딘 없이도 편한 식당.' }
-  ],
-  cafe: [
-    { name: '디카페인파', place: '밤샘 전용 카페', naverRate: 4.9, kakaoRate: 4.4, trustScore: 94, count: 156, photo: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400&auto=format&fit=crop', quote: '밤샘 코딩엔 디카페인이 필수.' },
-    { name: '뷰맛집부엉', place: '노트북 뷰', naverRate: 4.8, kakaoRate: 4.1, trustScore: 92, count: 152, photo: 'https://img1.daumcdn.net/thumb/R1280x0.fjpg/?fname=http://t1.daumcdn.net/brunch/service/user/cEb3/image/yIY5O1qAPgCBTrMwl1Myx1kiC7g.jpg', quote: '노트북 하기 좋은 카페 추천.' },
-    { name: '에스프레소', place: '진한 한잔', naverRate: 4.2, kakaoRate: 4.7, trustScore: 88, count: 139, photo: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400&auto=format&fit=crop', quote: '진한 커피만큼 진한 코드.' }
-  ]
-}
-</script>
-
 <template>
   <div class="min-h-screen bg-gray-50 font-sans">
     <header class="bg-orange-600 py-24 px-4 text-center">
@@ -114,3 +93,24 @@ const rankings = {
     </main>
   </div>
 </template>
+
+<script setup>
+// 🦉 기현님의 정교한 데이터 로직 (Trust Score 반영)
+const rankings = {
+  overall: [
+    { place: '제주 꽁치마을', category: '음식점', naverRate: 4.7, kakaoRate: 4.5, trustScore: 96, count: 210, photo: 'https://images.unsplash.com/photo-1512132411229-c30391241dd8?q=80&w=400&auto=format&fit=crop', description: '비린내 제로! 꽁치킬러들도 인정한 전국구 맛집.' },
+    { place: '노트북 뷰 카페', category: '카페', naverRate: 4.85, kakaoRate: 4.2, trustScore: 92, count: 152, photo: 'https://img1.daumcdn.net/thumb/R1280x0.fjpg/?fname=http://t1.daumcdn.net/brunch/service/user/cEb3/image/yIY5O1qAPgCBTrMwl1Myx1kiC7g.jpg', description: '카공족들의 성지, 압도적인 뷰와 콘센트 보유량으로 통합 1위!' },
+    { place: '순한맛 천국', category: '음식점', naverRate: 4.3, kakaoRate: 4.8, trustScore: 89, count: 189, photo: 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?q=80&w=400&auto=format&fit=crop', description: '위장보호가들의 안식처. 파모티딘 없이 즐기는 최고의 한 끼.' }
+  ],
+  restaurant: [
+    { name: '꽁치킬러', place: '제주 꽁치마을', naverRate: 4.7, kakaoRate: 4.5, trustScore: 96, count: 210, photo: 'https://images.unsplash.com/photo-1512132411229-c30391241dd8?q=80&w=400&auto=format&fit=crop', quote: '꽁치조림 레시피 공유합니다.' },
+    { name: '진라면순한맛', place: '순한맛 천국', naverRate: 4.3, kakaoRate: 4.8, trustScore: 89, photo: 'https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?q=80&w=400&auto=format&fit=crop', quote: '맵지 않은 맛집 전문가.' },
+    { name: '위장보호가', place: '편안한 식탁', naverRate: 4.1, kakaoRate: 4.3, trustScore: 82, photo: 'https://images.unsplash.com/photo-1512132411229-c30391241dd8?q=80&w=400&auto=format&fit=crop', quote: '파모티딘 없이도 편한 식당.' }
+  ],
+  cafe: [
+    { name: '디카페인파', place: '밤샘 전용 카페', naverRate: 4.9, kakaoRate: 4.4, trustScore: 94, count: 156, photo: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=400&auto=format&fit=crop', quote: '밤샘 코딩엔 디카페인이 필수.' },
+    { name: '뷰맛집부엉', place: '노트북 뷰', naverRate: 4.8, kakaoRate: 4.1, trustScore: 92, count: 152, photo: 'https://img1.daumcdn.net/thumb/R1280x0.fjpg/?fname=http://t1.daumcdn.net/brunch/service/user/cEb3/image/yIY5O1qAPgCBTrMwl1Myx1kiC7g.jpg', quote: '노트북 하기 좋은 카페 추천.' },
+    { name: '에스프레소', place: '진한 한잔', naverRate: 4.2, kakaoRate: 4.7, trustScore: 88, count: 139, photo: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?q=80&w=400&auto=format&fit=crop', quote: '진한 커피만큼 진한 코드.' }
+  ]
+}
+</script>
