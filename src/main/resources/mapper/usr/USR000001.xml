@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.allreviewung.usr.dao.USR000001DAO">
+
+    <select id="selectEmilDupChk" parameterType="String" resultType="int">
+        SELECT COUNT(1)
+        FROM TB_COM_USER_M
+        WHERE EMIL = #{emil}
+    </select>
+
+    <select id="selectNkNmDupChk" parameterType="String" resultType="int">
+        SELECT COUNT(1)
+        FROM TB_COM_USER_M
+        WHERE NK_NM = #{nkNm}
+    </select>
+
+    <insert id="insertUser" parameterType="com.allreviewung.usr.vo.USR00000101IN">
+        INSERT
+          INTO TB_COM_USER_M
+             (
+               USER_ID
+             , EMIL
+             , PSWD
+             , NK_NM
+             , REG_ID
+             , REG_DTM
+             , CHNG_ID
+             , CHNG_DTM
+             )
+        VALUES
+             (
+               NEXTVAL(SEQ_COM_USER_ID)
+             , #{emil}
+             , #{pswd}
+             , #{nkNm}
+             , 'SYSTEM'
+             , SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
+             , 'SYSTEM'
+             , SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
+             )
+    </insert>
+
+
+</mapper>
+

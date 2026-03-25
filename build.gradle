@@ -39,6 +39,10 @@ dependencies {
     implementation 'org.seleniumhq.selenium:selenium-java:4.18.1'
     // WebDriverManager
     implementation 'io.github.bonigarcia:webdrivermanager:5.7.0'
+    // 유효성 검사(Validation) 라이브러리
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // Spring Security (BCryptPasswordEncoder가 포함)
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 }
 
 tasks.named('test') {

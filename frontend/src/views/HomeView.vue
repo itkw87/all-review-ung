@@ -2,7 +2,7 @@
   <div class="min-h-screen bg-gray-50 font-sans">
     <header class="bg-orange-600 py-24 px-4 text-center">
       <h1 class="text-6xl font-black text-white mb-8 tracking-tighter">올리뷰엉 🦉</h1>
-      <p class="text-orange-100 mb-12 text-xl font-medium">기현님의 소중한 리뷰를 들려주세요</p>
+      <p class="text-orange-100 mb-12 text-xl font-medium">OO님의 소중한 리뷰를 들려주세요</p>
       <div class="max-w-3xl mx-auto flex bg-white rounded-full shadow-2xl overflow-hidden p-1.5 border-4 border-orange-500/30">
         <input type="text" placeholder="가게 이름이나 지역을 검색해보세요" class="flex-grow px-8 py-4 outline-none text-gray-700 text-lg" />
         <button @click="$router.push('/map')" class="bg-gray-900 text-white px-12 py-4 rounded-full hover:bg-black transition-all font-bold text-lg cursor-pointer">검색</button>
@@ -95,7 +95,6 @@
 </template>
 
 <script setup>
-// 🦉 기현님의 정교한 데이터 로직 (Trust Score 반영)
 const rankings = {
   overall: [
     { place: '제주 꽁치마을', category: '음식점', naverRate: 4.7, kakaoRate: 4.5, trustScore: 96, count: 210, photo: 'https://images.unsplash.com/photo-1512132411229-c30391241dd8?q=80&w=400&auto=format&fit=crop', description: '비린내 제로! 꽁치킬러들도 인정한 전국구 맛집.' },

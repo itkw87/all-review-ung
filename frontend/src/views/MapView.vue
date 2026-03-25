@@ -30,7 +30,7 @@
       <div class="search-results">
         <div class="empty-state">
           <p class="main-text">
-            {{ activeMenu === 'home' ? '주변의 숨은 맛집을 찾아보세요' : '기현님이 찜한 소중한 맛집들' }}
+            {{ activeMenu === 'home' ? '주변의 숨은 맛집을 찾아보세요' : 'OO님이 찜한 소중한 맛집들' }}
           </p>
           <p class="sub-text">부엉이가 정성껏 리뷰를 모아왔어요 🦉</p>
         </div>

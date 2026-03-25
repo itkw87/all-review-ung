@@ -2,8 +2,8 @@
   <div class="min-h-[80vh] flex items-center justify-center bg-gray-50 px-4">
     <div class="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl p-10 border border-gray-100">
       <div class="text-center mb-10">
-        <h2 class="text-3xl font-black text-gray-800 mb-2">반갑부엉! 🦉</h2>
-        <p class="text-gray-500 font-medium text-sm">기현님의 정직한 리뷰를 들려주세요.</p>
+        <h2 class="text-3xl font-black text-gray-800 mb-2">로그인 🦉</h2>
+        <p class="text-gray-500 font-medium text-sm">OO님의 정직한 리뷰를 들려주세요.</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-6">
