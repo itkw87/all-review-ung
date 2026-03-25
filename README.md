@@ -16,14 +16,4 @@
 * Database: MariaDB (MyBatis 연동) (수정)
 * API: Kakao Maps API, Selenium (추가)
 
-### 🚧 현재 진행 상황 (Current Progress)
-
-* ✅ 프로젝트 초기 환경 설정 (Vite + Vue 3)
-* ✅ 카카오맵 API 연동 및 기본 지도 레이아웃 구현
-* ✅ Spring Boot & Spring Batch 백엔드 통합 환경 구축 (추가)
-* ✅ MariaDB 연동 및 배치 메타 데이터 테이블 설정 (추가)
-* ✅ 외부 리뷰 수집 배치 프로세스(BCH000001) 기본 구현 (추가)
-* ⬜ 네이버/카카오 실제 리뷰 크롤링 상세 로직 고도화 (진행중)
-* ⬜ 플랫폼별 평점 합산 및 평균 계산 알고리즘 구현
-
 © 2026 Choi Ki-hyeon.
