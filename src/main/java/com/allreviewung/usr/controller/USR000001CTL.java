@@ -8,9 +8,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.HashMap;
@@ -39,4 +41,12 @@ public class USR000001CTL {
         }
     }
 
+    @GetMapping("/kakao/login")
+    public ResponseEntity<?> kakaoLogin(@RequestParam("code") String code) {
+        log.info("[CTL] 카카오 로그인 시도 - code: {}", code);
+
+        Map<String, Object> result = svcUSR000001.kakaoLogin(code);
+
+        return ResponseEntity.ok(result);
+    }
 }

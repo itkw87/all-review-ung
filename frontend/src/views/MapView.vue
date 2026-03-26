@@ -22,7 +22,7 @@
     <aside class="search-panel" :class="{ 'collapsed': !isPanelOpen }">
       <div class="search-header">
         <div class="search-input-wrapper">
-          <input type="text" placeholder="맛집을 검색해보부엉! 🦉" class="main-search-input" />
+          <input type="text" placeholder="맛집을 검색해보세요! 🦉" class="main-search-input" />
           <button class="search-btn">검색</button>
         </div>
       </div>

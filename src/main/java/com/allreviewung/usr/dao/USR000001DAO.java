@@ -14,7 +14,7 @@ public interface USR000001DAO {
     int selectEmilDupChk(String strParam);
 
     /*
-     * 이메일 닉네임 중복확인
+     * 이메일 닉네임 중복 확인
      * @param USR00000101IN
      * @return int
      */
@@ -26,5 +26,12 @@ public interface USR000001DAO {
      * @return int
      */
     int insertUser(USR00000101IN inParam);
+
+    /*
+     * SNS ID 중복 확인
+     * @param USR00000101IN
+     * @return int
+     */
+    int selectSnsIdDupChk(USR00000101IN inParam);
 
 }

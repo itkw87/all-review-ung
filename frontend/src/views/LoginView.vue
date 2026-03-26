@@ -37,6 +37,24 @@
         </button>
       </form>
 
+      <div class="mt-8">
+        <div class="relative flex items-center mb-8">
+          <div class="flex-grow border-t border-gray-200"></div>
+          <span class="flex-shrink mx-4 text-gray-400 text-xs font-bold uppercase">또는</span>
+          <div class="flex-grow border-t border-gray-200"></div>
+        </div>
+
+        <div class="flex justify-center">
+          <button @click="handleKakaoLogin" class="cursor-pointer transition-transform hover:scale-105 active:scale-95">
+            <img
+                :src="kakaoLoginBtn"
+                alt="카카오 로그인"
+                class="w-[180px] drop-shadow-md"
+            />
+          </button>
+        </div>
+      </div>
+
       <div class="mt-8 text-center text-sm font-medium text-gray-600">
         아직 회원이 아니신가요?
         <RouterLink to="/join" class="text-orange-600 hover:underline font-bold ml-1">회원 가입하기</RouterLink>
@@ -47,14 +65,20 @@
 
 <script setup>
 import { ref } from 'vue'
+import kakaoLoginBtn from '@/assets/kakao_login.png'
 
-// 입력받을 변수 선언 (바구니 만들기)
 const email = ref('')
 const password = ref('')
 
 const handleLogin = () => {
-  // 나중에 백엔드 API 연결할 곳입니다.
   console.log('로그인 정보:', email.value, password.value)
-  alert('로그인 시도 중부엉! 🦉')
+  alert('로그인 시도 중! 🦉')
 }
+
+const handleKakaoLogin = () => {
+  const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${import.meta.env.VITE_KAKAO_REST_API_KEY}&redirect_uri=${VITE_KAKAO_REDIRECT_URI}`;
+
+  window.location.href = KAKAO_AUTH_URL;
+};
+
 </script>

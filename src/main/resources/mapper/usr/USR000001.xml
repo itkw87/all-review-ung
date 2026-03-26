@@ -23,6 +23,8 @@
              , EMIL
              , PSWD
              , NK_NM
+             , SNS_ID
+             , SNS_DVCD
              , REG_ID
              , REG_DTM
              , CHNG_ID
@@ -34,6 +36,8 @@
              , #{emil}
              , #{pswd}
              , #{nkNm}
+             , #{snsId}
+             , #{snsDvcd}
              , 'SYSTEM'
              , SUBSTR(DATE_FORMAT(NOW(3), '%Y%m%d%H%i%s%f'), 1, 17)
              , 'SYSTEM'
@@ -41,6 +45,12 @@
              )
     </insert>
 
+    <select id="selectSnsIdDupChk" resultType="int">
+        SELECT COUNT(1)
+          FROM TB_COM_USER_M
+         WHERE SNS_ID   = #{snsId}
+           AND SNS_DVCD = #{snsDvcd}
+    </select>
 
 </mapper>
 

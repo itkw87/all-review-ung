@@ -20,5 +20,7 @@ public class USR00000101IN {
     @NotBlank(message = "이메일은 필수입니다")
     @Size(max = 50, message = "닉네임은 50자를 넘을 수 없습니다;")
     private String nkNm;
+    private String snsId;
+    private String snsDvcd;
 
 }

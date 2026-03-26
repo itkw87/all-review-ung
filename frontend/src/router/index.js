@@ -3,6 +3,7 @@ import HomeView from '../views/HomeView.vue'
 import MapView from '../views/MapView.vue'
 import LoginView from '../views/LoginView.vue'
 import JoinView from '../views/JoinView.vue'
+import KakaoRedirect from "@/views/KakaoRedirect.vue";
 
 
 const router = createRouter({
@@ -27,6 +28,11 @@ const router = createRouter({
       path: '/join',
       name: 'join',
       component: JoinView
+    },
+    {
+      path: '/login/oauth/kakao',
+      name: 'KakaoRedirect',
+      component: KakaoRedirect
     },
   ],
 })

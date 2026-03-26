@@ -25,7 +25,7 @@ public class BCH00000101TSK implements Tasklet {
     private String serviceKey;
 
     private final BCH000001DAO daoBCH000001;
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
     @Override
     public RepeatStatus execute(StepContribution contribution, ChunkContext chunkContext) throws Exception {
