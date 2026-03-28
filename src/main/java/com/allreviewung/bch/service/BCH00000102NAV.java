@@ -240,7 +240,7 @@ public class BCH00000102NAV {
                                     updateParam.setScrpTrgtId(scrpTrgt.getScrpTrgtId());
                                     updateParam.setProgStatCd("01");
                                     int result = daoBCH000001.updateScrpTrgtStat(updateParam);
-                                    if (result == 0) throw new RuntimeException("DB에 업데이트 대상이 없습니다");
+                                    if (result == 0) throw new ArvuBusinessException("DB에 업데이트 대상이 없습니다");
                                     log.info(">>> [NAV] 진행상태 업데이트 완료. 수집대상ID: {}, 예정 진행상태 코드: {}", scrpTrgt.getScrpTrgtId(), updateParam.getProgStatCd());
                                 } catch (Exception e) {
                                     log.error(">>> [NAV] 진행상태 업데이트 실패. 다음가게로 이동... 에러: {}", e.getMessage());
@@ -474,7 +474,7 @@ public class BCH00000102NAV {
                     insertCount += insertResult;
                     log.info(">>> [NAV] 장소 테이블에 INSERT완료. 수집대상ID: {}, 장소명: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm());
                 } else {
-                    throw new RuntimeException(String.format("INSERT 결과가 %d건입니다.", insertResult));
+                    throw new ArvuBusinessException(String.format("INSERT 결과가 %d건입니다.", insertResult));
                 }
 
                 BCH00000201IN updateParam = new BCH00000201IN();
@@ -485,7 +485,7 @@ public class BCH00000102NAV {
                     int result = daoBCH000001.updateScrpTrgtStat(updateParam);
 
                     if (result == 0) {
-                        throw new RuntimeException("DB에 업데이트 대상이 없습니다");
+                        throw new ArvuBusinessException("DB에 업데이트 대상이 없습니다");
                     }
                     log.info(">>> [NAV] 진행상태 업데이트 완료. 수집대상ID: {}, 장소명: {}, 예정 진행상태 코드: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm(), updateParam.getProgStatCd());
                 } catch (Exception e) {

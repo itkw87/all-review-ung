@@ -1,4 +1,4 @@
-package com.allreviewung.cfg;
+package com.allreviewung.global.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

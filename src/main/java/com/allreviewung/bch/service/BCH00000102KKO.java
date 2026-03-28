@@ -4,6 +4,7 @@ import com.allreviewung.bch.dao.BCH000001DAO;
 import com.allreviewung.bch.dto.BCH00000101DTO;
 import com.allreviewung.bch.service.svo.BCH00000201IN;
 import com.allreviewung.bch.service.svo.BCH00000202IN;
+import com.allreviewung.global.exception.ArvuBusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;
@@ -138,7 +139,7 @@ public class BCH00000102KKO {
                             int result = daoBCH000001.updateScrpTrgtStat(updateParam);
 
                             if (result == 0) {
-                                throw new RuntimeException("DB에 업데이트 대상이 없습니다");
+                                throw new ArvuBusinessException("DB에 업데이트 대상이 없습니다");
                             }
                             log.info(">>> [KKO] 진행상태 업데이트 완료. 수집대상ID: {}, 장소명: {}, 예정 진행상태 코드: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm(), updateParam.getProgStatCd());
                         } catch (Exception e) {
@@ -246,7 +247,7 @@ public class BCH00000102KKO {
                                     int insertResult = daoBCH000001.insertPlac(insertParam);
 
                                     if (insertResult == 0) {
-                                        throw new RuntimeException("INSERT 결과가 0건입니다.");
+                                        throw new ArvuBusinessException("INSERT 결과가 0건입니다.");
                                     }
                                     try {
                                         updateParam.setProgStatCd("04");
@@ -254,7 +255,7 @@ public class BCH00000102KKO {
                                         int result = daoBCH000001.updateScrpTrgtStat(updateParam);
 
                                         if (result == 0) {
-                                            throw new RuntimeException("DB에 업데이트 대상이 없습니다");
+                                            throw new ArvuBusinessException("DB에 업데이트 대상이 없습니다");
                                         }
                                         log.info(">>> [KKO] 진행상태 업데이트 완료. 수집대상ID: {}, 장소명: {}, 예정 진행상태 코드: {}", scrpTrgt.getScrpTrgtId(), scrpTrgt.getPblcDataPlacNm(), updateParam.getProgStatCd());
                                     } catch (Exception e) {

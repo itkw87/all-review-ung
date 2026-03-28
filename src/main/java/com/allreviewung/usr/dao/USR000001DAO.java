@@ -28,10 +28,17 @@ public interface USR000001DAO {
     int insertUser(USR00000101IN inParam);
 
     /*
-     * SNS ID 중복 확인
+     * 회원 조회
+     * @param USR00000101IN
+     * @return USR000001DTO
+     */
+    USR000001DTO selectUser(USR00000101IN inParam);
+
+    /*
+     * 회원 조회
      * @param USR00000101IN
      * @return int
      */
-    int selectSnsIdDupChk(USR00000101IN inParam);
+    int updateRfrsTokn(USR00000101IN inParam);
 
 }

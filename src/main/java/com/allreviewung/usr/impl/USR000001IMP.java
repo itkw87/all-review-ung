@@ -1,6 +1,9 @@
 package com.allreviewung.usr.impl;
 
+import com.allreviewung.global.exception.ArvuBusinessException;
+import com.allreviewung.security.JwtTokenProvider;
 import com.allreviewung.usr.dao.USR000001DAO;
+import com.allreviewung.usr.dao.USR000001DTO;
 import com.allreviewung.usr.dto.KakaoTokenDTO;
 import com.allreviewung.usr.dto.KakaoUserDTO;
 import com.allreviewung.usr.service.USR000001SVC;
@@ -34,6 +37,8 @@ public class USR000001IMP implements USR000001SVC {
 
     private final RestTemplate restTemplate;
 
+    private final JwtTokenProvider tokenProvider;
+
     // yml 설정값 불러오기
     @Value("${kakao.kakao-rest-api-key}")
     private String clientId;
@@ -50,11 +55,11 @@ public class USR000001IMP implements USR000001SVC {
         log.info("[IMP] 회원가입 처리 시작 - 데이터: {}", inParam);
 
         if (daoUSR000001.selectEmilDupChk(inParam.getEmil()) > 0) {
-            throw new RuntimeException("이미 사용 중인 이메일입니다");
+            throw new ArvuBusinessException("이미 사용 중인 이메일입니다");
         }
 
         if (daoUSR000001.selectNkNmDupChk(inParam.getNkNm()) > 0) {
-            throw new RuntimeException("이미 사용 중인 닉네임입니다");
+            throw new ArvuBusinessException("이미 사용 중인 닉네임입니다");
         }
 
         // 비밀번호 암호화
@@ -69,6 +74,7 @@ public class USR000001IMP implements USR000001SVC {
     }
 
     @Override
+    @Transactional
     public Map<String, Object> kakaoLogin(String code) {
         log.info("[IMP] 카카오 로그인 code: {}", code);
 
@@ -89,7 +95,7 @@ public class USR000001IMP implements USR000001SVC {
         KakaoTokenDTO tokenDto = restTemplate.postForObject(tokenUrl, new HttpEntity<>(tokenParams, tokenHeaders), KakaoTokenDTO.class);
 
         if (tokenDto == null || tokenDto.getAccessToken() == null) {
-            throw new RuntimeException("카카오 토큰을 받아오지 못했습니다.");
+            throw new ArvuBusinessException("카카오 토큰을 받아오지 못했습니다.");
         }
 
         String userUrl = "https://kapi.kakao.com/v2/user/me";
@@ -100,7 +106,7 @@ public class USR000001IMP implements USR000001SVC {
         KakaoUserDTO kakaoUser = restTemplate.exchange(userUrl, HttpMethod.GET, new HttpEntity<>(userHeaders), KakaoUserDTO.class).getBody();
 
         if (kakaoUser == null) {
-            throw new RuntimeException("카카오 유저 정보를 가져오지 못했습니다.");
+            throw new ArvuBusinessException("카카오 유저 정보를 가져오지 못했습니다.");
         }
 
         log.info("[IMP] 카카오 사용자 정보 응답 확인");
@@ -110,17 +116,26 @@ public class USR000001IMP implements USR000001SVC {
         log.info("[IMP] ------------------------------------------------------");
 
         String kakaoId = String.valueOf(kakaoUser.getId());
-        String dummyEmail = kakaoId + "@kakao.user";
+        String email = kakaoId + "@kakao.user";    // 카카오 사용자 정보에서 이메일 정보를 주지 않으므로 해당 형식으로 임시 사용
         String nickname = "";
 
-        USR00000101IN insertParam = new USR00000101IN();
+        USR00000101IN commonParam = new USR00000101IN();
 
-        insertParam.setSnsId(kakaoId);
-        insertParam.setSnsDvcd("KKO");
-        if (daoUSR000001.selectSnsIdDupChk(insertParam) == 0) {
-            log.info("[IMP] 신규 유저임. 자동 회원가입 진행: {}", insertParam);
+        commonParam.setSnsId(kakaoId);
+        commonParam.setSnsDvcd("KKO");
 
-            insertParam.setEmil(dummyEmail);
+        USR000001DTO user = daoUSR000001.selectUser(commonParam);
+
+        if (user != null) {
+            commonParam.setUserId(user.getUserId());
+            nickname = user.getNkNm();
+
+            log.info("[IMP] 기존 가입 유저 로그인 진행: {}", nickname);
+        } // if (user != null)
+        else {
+            log.info("[IMP] 신규 유저임. 자동 회원가입 진행: {}", commonParam);
+
+            commonParam.setEmil(email);
 
             String baseNickName = kakaoUser.getKakaoAccount().getProfile().getNickname();
             nickname = baseNickName;
@@ -130,25 +145,41 @@ public class USR000001IMP implements USR000001SVC {
                 int randomNum = (int)(Math.random() * 9000) + 1000;    // 1000 - 9999
                 nickname = baseNickName + "#" + randomNum;
             }
-
-            insertParam.setNkNm(nickname);
-            insertParam.setSnsId(kakaoId);
+            commonParam.setNkNm(nickname);
+            commonParam.setSnsId(kakaoId);
             // 일반 로그인 뚫림 방지용 비밀번호 난수로 생성하여 암호화
-            insertParam.setPswd(passwordEncoder.encode("KKO_USER_" + UUID.randomUUID()));
+            commonParam.setPswd(passwordEncoder.encode("KKO_USER_" + UUID.randomUUID()));
 
-            this.insertUser(insertParam);
+            int result = this.insertUser(commonParam);
 
-        } else {
-            log.info("[IMP] 기존 가입 유저 로그인 진행: {}", nickname);
+            if (result != 1) {
+                throw new ArvuBusinessException("간편 로그인에 실패하였습니다.");
+            }
+        } // else
+        // 토큰 생성
+        String accessToken = tokenProvider.createAccessToken(kakaoId, nickname);
+        String refreshToken = tokenProvider.createRefreshToken(kakaoId);
+
+        // 리프레시 토큰 DB 저장
+        commonParam.setRfrsTokn(refreshToken);
+        int updateCount = daoUSR000001.updateRfrsTokn(commonParam);
+
+        if (updateCount == 0) {
+            log.error("[JWT] 리프레시 토큰 저장 실패! 카카오 고유 ID: {}", kakaoId);
+            throw new ArvuBusinessException("토큰 발급에 실패하였습니다.");
         }
 
+        log.info("[JWT] 리프레시 토큰 저장 완료. 카카오 고유 ID: {}", kakaoId);
+
         Map<String, Object> result = new HashMap<>();
-        result.put("status", "SUCCESS");
+        result.put("accessToken", accessToken);
+        result.put("refreshToken", refreshToken);
+
         result.put("snsId", kakaoId);
         result.put("nickname", nickname);
-        result.put("email", insertParam.getEmil());
-        result.put("message", nickname + "님, 올리뷰엉에 오신것을 환영합니다.");
+        result.put("email", email);
 
+        result.put("status", "SUCCESS");
         return result;
     }
 }

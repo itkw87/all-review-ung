@@ -19,9 +19,9 @@ public class GlobalExceptionHandler {
         return buildResponse(msg, HttpStatus.BAD_REQUEST);
     }
 
-    // 2. [기존 RuntimeException]을 잡는 곳 (서비스에서 던진 중복 체크 등)
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<?> handleRuntimeException(RuntimeException e) {
+    // 2. [기존 ArvuBusinessException]을 잡는 곳 (서비스에서 던진 중복 체크 등)
+    @ExceptionHandler(ArvuBusinessException.class)
+    public ResponseEntity<?> handleRuntimeException(ArvuBusinessException e) {
         return buildResponse(e.getMessage(), HttpStatus.BAD_REQUEST);
     }
 
