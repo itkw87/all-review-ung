@@ -3,7 +3,7 @@ package com.allreviewung.usr.impl;
 import com.allreviewung.global.exception.ArvuBusinessException;
 import com.allreviewung.security.JwtTokenProvider;
 import com.allreviewung.usr.dao.USR000001DAO;
-import com.allreviewung.usr.dao.USR000001DTO;
+import com.allreviewung.usr.dto.USR00000101DTO;
 import com.allreviewung.usr.dto.KakaoTokenDTO;
 import com.allreviewung.usr.dto.KakaoUserDTO;
 import com.allreviewung.usr.service.USR000001SVC;
@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -115,6 +116,7 @@ public class USR000001IMP implements USR000001SVC {
         log.info("[IMP] 2. 카카오 닉네임 (nickname): {}", kakaoUser.getKakaoAccount().getProfile().getNickname());
         log.info("[IMP] ------------------------------------------------------");
 
+        int userId = 0;
         String kakaoId = String.valueOf(kakaoUser.getId());
         String email = kakaoId + "@kakao.user";    // 카카오 사용자 정보에서 이메일 정보를 주지 않으므로 해당 형식으로 임시 사용
         String nickname = "";
@@ -124,10 +126,11 @@ public class USR000001IMP implements USR000001SVC {
         commonParam.setSnsId(kakaoId);
         commonParam.setSnsDvcd("KKO");
 
-        USR000001DTO user = daoUSR000001.selectUser(commonParam);
+        USR00000101DTO user = daoUSR000001.selectUser(commonParam);
 
         if (user != null) {
-            commonParam.setUserId(user.getUserId());
+            userId = user.getUserId();
+            commonParam.setUserId(userId);
             nickname = user.getNkNm();
 
             log.info("[IMP] 기존 가입 유저 로그인 진행: {}", nickname);
@@ -155,10 +158,11 @@ public class USR000001IMP implements USR000001SVC {
             if (result != 1) {
                 throw new ArvuBusinessException("간편 로그인에 실패하였습니다.");
             }
+            userId = commonParam.getUserId();
         } // else
         // 토큰 생성
-        String accessToken = tokenProvider.createAccessToken(kakaoId, nickname);
-        String refreshToken = tokenProvider.createRefreshToken(kakaoId);
+        String accessToken = tokenProvider.createAccessToken(userId, nickname);
+        String refreshToken = tokenProvider.createRefreshToken(userId);
 
         // 리프레시 토큰 DB 저장
         commonParam.setRfrsTokn(refreshToken);
@@ -182,4 +186,60 @@ public class USR000001IMP implements USR000001SVC {
         result.put("status", "SUCCESS");
         return result;
     }
+
+    @Transactional
+    public Map<String, String> reissueTokens(String refreshToken) {
+        // 토큰 유효성 검사
+        if (!tokenProvider.validateToken(refreshToken)) {
+            throw new ArvuBusinessException("리프레시 토큰이 만료되었습니다. 다시 로그인해주세요", HttpStatus.UNAUTHORIZED);
+        }
+        USR00000101IN commonParam = new USR00000101IN();
+        commonParam.setUserId(tokenProvider.getUserId(refreshToken));
+
+        USR00000101DTO user = daoUSR000001.selectRfrsTokn(commonParam);
+
+        if (user == null) {
+            throw new ArvuBusinessException("인증 정보에 해당하는 회원을 찾을 수 없습니다.", HttpStatus.UNAUTHORIZED);
+        }
+        int userId = user.getUserId();
+        String dbRefreshToken = user.getRfrsTokn();
+        if (dbRefreshToken == null || !dbRefreshToken.equals(refreshToken)) {
+            log.warn("[Security Alert] 토큰 불일치 유저 ID: {}", commonParam.getUserId());
+            throw new ArvuBusinessException("유효하지 않은 리프레시 토큰입니다.", HttpStatus.UNAUTHORIZED);
+        }
+        // 새로운 토큰 발급하여 반환
+        String newAccessToken = tokenProvider.createAccessToken(userId, user.getNkNm());
+        String newRefreshToken = tokenProvider.createRefreshToken(userId);
+
+        commonParam.setRfrsTokn(newRefreshToken);
+        int result = daoUSR000001.updateRfrsTokn(commonParam);
+
+        if (result == 0) {
+            throw new ArvuBusinessException("인증 정보 갱신에 실패했습니다;", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        Map<String, String> tokenMap = new HashMap<>();
+        tokenMap.put("accessToken", newAccessToken);
+        tokenMap.put("refreshToken", newRefreshToken);
+
+        log.info("[JWT] 토큰 2종 세트 재발급 완료. userId: {}, nkNm: {}", userId, user.getNkNm());
+
+        return tokenMap;
+    }
+
+    @Override
+    @Transactional
+    public void logout(int userId) {
+        USR00000101IN updateParam = new USR00000101IN();
+        updateParam.setUserId(userId);
+        // 리프레쉬 토큰 값 NULL로 초기화
+        updateParam.setRfrsTokn(null);
+
+        int result = daoUSR000001.updateRfrsTokn(updateParam);
+        if (result == 0) {
+            log.warn("[Logout:Failure] 로그아웃 실패 - 존재하지 않는 사용자 ID: {}", userId);
+            throw new ArvuBusinessException("로그아웃 처리 중 사용자를 찾을 수 없습니다.");
+        }
+        log.info("[Logout:Success] DB 리프레시 토큰 삭제 완료. userId: {}", userId);
+    }
+
 }

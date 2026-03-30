@@ -3,7 +3,6 @@ package com.allreviewung.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -46,8 +45,8 @@ public class JwtTokenProvider {
     /**
      * Access Token 생성
      */
-    public String createAccessToken(String snsId, String nickname) {
-        Claims claims = Jwts.claims().setSubject(snsId);
+    public String createAccessToken(int userId, String nickname) {
+        Claims claims = Jwts.claims().setSubject(String.valueOf(userId));
         claims.put("nickname", nickname);
 
         Date now = new Date();
@@ -62,10 +61,10 @@ public class JwtTokenProvider {
     /**
      * Refresh Token 생성
      */
-    public String createRefreshToken(String snsId) {
+    public String createRefreshToken(int userId) {
         Date now = new Date();
         return Jwts.builder()
-                .setSubject(snsId)    // 토큰의 주인 구별을 위한 식별자
+                .setSubject(String.valueOf(userId))    // 토큰의 주인 구별을 위한 식별자
                 .setIssuedAt(now)     // 발행 시간
                 .setExpiration(new Date(now.getTime() + refreshTokenValidTime))    // 만료 시간
                 .signWith(key, SignatureAlgorithm.HS512)
@@ -89,19 +88,20 @@ public class JwtTokenProvider {
     }
 
     /**
-     *  토큰에서 SND_ID 꺼냬기
+     *  토큰에서 회원ID 꺼냬기
      */
-    public String getSnsId(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+    public int getUserId(String token) {
+        String userIdStr = Jwts.parserBuilder()
+                               .setSigningKey(key)
+                               .build()
+                               .parseClaimsJws(token)
+                               .getBody()
+                               .getSubject();
+        return Integer.parseInt(userIdStr);
     }
 
     /**
-     *  토큰에서 SND_ID 꺼냬기
+     *  토큰에서 닉네임 꺼내기
      */
     public String getNickname(String token) {
         return (String)Jwts.parserBuilder()
@@ -116,9 +116,9 @@ public class JwtTokenProvider {
      *  토큰 인증 정보(Authentication) 조회
      */
     public Authentication getAuthentication(String token) {
-        String snsId = this.getSnsId(token);
+        int userId = this.getUserId(token);
 
-        UserDetails userDetails = new User(snsId, "", Collections.emptyList());
+        UserDetails userDetails = new User(String.valueOf(userId), "", Collections.emptyList());
 
         return new UsernamePasswordAuthenticationToken(userDetails, "", userDetails.getAuthorities());
     }

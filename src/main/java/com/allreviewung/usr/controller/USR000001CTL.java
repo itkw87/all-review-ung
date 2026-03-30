@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -48,5 +50,33 @@ public class USR000001CTL {
         Map<String, Object> result = svcUSR000001.kakaoLogin(code);
 
         return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<?> refresh(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+
+        Map<String, String> result = svcUSR000001.reissueTokens(refreshToken);
+
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            log.warn("[Logout:Unauthorized] 인증 정보 없이 로그아웃 시도");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증 정보가 없습니다.");
+        }
+
+        try {
+            // 현재 로그인한 회원ID 가져오기
+            int userId = Integer.parseInt(userDetails.getUsername());
+            // 로그아웃 처리
+            svcUSR000001.logout(userId);
+            return ResponseEntity.ok("로그아웃 성공");
+        } catch (Exception e) {
+            log.error("[Logout:Error] 로그아웃 중 예상치 못한 에러 발생: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("로그아웃 처리 중 서버 에러가 발생했습니다.");
+        }
     }
 }

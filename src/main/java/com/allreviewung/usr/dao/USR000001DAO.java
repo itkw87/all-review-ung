@@ -1,5 +1,6 @@
 package com.allreviewung.usr.dao;
 
+import com.allreviewung.usr.dto.USR00000101DTO;
 import com.allreviewung.usr.vo.USR00000101IN;
 import org.apache.ibatis.annotations.Mapper;
 
@@ -30,9 +31,9 @@ public interface USR000001DAO {
     /*
      * 회원 조회
      * @param USR00000101IN
-     * @return USR000001DTO
+     * @return USR00000101DTO
      */
-    USR000001DTO selectUser(USR00000101IN inParam);
+    USR00000101DTO selectUser(USR00000101IN inParam);
 
     /*
      * 회원 조회
@@ -40,5 +41,12 @@ public interface USR000001DAO {
      * @return int
      */
     int updateRfrsTokn(USR00000101IN inParam);
+
+    /*
+     * refreshToken 조회
+     * @param USR00000101IN
+     * @return USR00000101DTO
+     */
+    USR00000101DTO selectRfrsTokn(USR00000101IN inParam);
 
 }

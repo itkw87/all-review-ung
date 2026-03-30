@@ -26,11 +26,19 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
+        http.cors(cors -> cors.configurationSource(request -> {
+                    var config = new org.springframework.web.cors.CorsConfiguration();
+                    config.setAllowedOrigins(java.util.List.of("http://localhost:5173")); // Vue 주소 허용
+                    config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                    config.setAllowedHeaders(java.util.List.of("*"));
+                    config.setAllowCredentials(true);
+                    return config;
+                }))
+                .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/user/join", "/api/user/kakao/login").permitAll() // 로그인, 회원가입은 모두 접근 허용
-                                                   .anyRequest().authenticated()                                                // 나머지는 로그인 필요
-                 ).addFilterBefore(new JwtAuthenticationFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class); // 시큐리티의 기본 필터(UsernamePasswordAuthenticationFilter) 앞에 JWT 커스텀 필터 추가
+                .authorizeHttpRequests(auth -> auth.requestMatchers("/api/user/join", "/api/user/kakao/login", "/api/user/refresh").permitAll() // 로그인, 회원가입, 토큰재발행은 모두 접근 허용
+                                                   .anyRequest().authenticated()                                                                        // 나머지는 로그인 필요
+                 ).addFilterBefore(new JwtAuthenticationFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class);                             // 시큐리티의 기본 필터(UsernamePasswordAuthenticationFilter) 앞에 JWT 커스텀 필터 추가
         return http.build();
     }
 

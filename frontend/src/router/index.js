@@ -30,7 +30,7 @@ const router = createRouter({
       component: JoinView
     },
     {
-      path: '/login/oauth/kakao',
+      path: '/kakao/login',
       name: 'KakaoRedirect',
       component: KakaoRedirect
     },

@@ -4,6 +4,7 @@ import com.allreviewung.bch.dao.BCH000001DAO;
 import com.allreviewung.bch.dto.BCH00000101DTO;
 import com.allreviewung.bch.service.svo.BCH00000201IN;
 import com.allreviewung.bch.service.svo.BCH00000202IN;
+import com.allreviewung.global.exception.ArvuBusinessException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.openqa.selenium.By;

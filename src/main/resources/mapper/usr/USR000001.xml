@@ -17,7 +17,7 @@
 
     <insert id="insertUser" parameterType="com.allreviewung.usr.vo.USR00000101IN">
         <selectKey keyProperty="userId" resultType="int" order="BEFORE">
-            SELECT NEXT VALUE FOR SEQ_USER_ID
+            SELECT NEXT VALUE FOR SEQ_COM_USER_ID
         </selectKey>
         INSERT
           INTO TB_COM_USER_M
@@ -57,11 +57,19 @@
     </select>
 
     <update id="updateRfrsTokn" parameterType="com.allreviewung.usr.vo.USR00000101IN">
-       UPDATE TB_COM_USER_M
-          SET RFRS_TOKN = #{rfrsTokn}
-        WHERE USER_ID   = #{userId}
+        UPDATE TB_COM_USER_M
+           SET RFRS_TOKN = #{rfrsTokn}
+         WHERE USER_ID   = #{userId}
     </update>
 
+    <select id="selectRfrsTokn" parameterType="com.allreviewung.usr.vo.USR00000101IN" resultType="com.allreviewung.usr.dto.USR00000101DTO">
+        SELECT SNS_ID
+             , SNS_DVCD
+             , NK_NM
+             , RFRS_TOKN
+          FROM TB_COM_USER_M
+         WHERE USER_ID  = #{userId}
+    </select>
 
 </mapper>
 
