@@ -65,16 +65,44 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '@/api/index.js';
 import kakaoLoginBtn from '@/assets/kakao_login.png'
 
+const router = useRouter();
 const email = ref('')
 const password = ref('')
 
-const handleLogin = () => {
-  console.log('로그인 정보:', email.value, password.value)
-  alert('로그인 시도 중! 🦉')
-}
+const handleLogin = async () => {
+  try {
+    // 로그인 요청
+    const response = await api.post('/api/user/login', {
+      emil: email.value,
+      pswd: password.value
+    });
 
+    // 로그인 성공시
+    if (response.data.status === 'SUCCESS') {
+      const { accessToken, refreshToken, nickname, email: userEmail } = response.data;
+
+      // localStorage 값 셋팅
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('nickname', nickname);
+      localStorage.setItem('email', userEmail);
+      localStorage.setItem('isLoggedIn', 'true'); // 로그인 플래그
+
+      alert('로그인 성공! 🦉')
+      // 로그인 성공시 메인으로 이동
+      router.push('/')
+    }
+  } catch (error) {
+    console.error('로그인 에러:', error);
+    // 백엔드에서 보낸 에러 메시지가 있으면 띄워주고, 없으면 기본 메시지!
+    const errorMsg = error.response?.data?.message || '아이디 또는 비밀번호를 확인해주세요! 🦉';
+    alert(errorMsg);
+  }
+}
 const handleKakaoLogin = () => {
   const KAKAO_AUTH_URL = `https://kauth.kakao.com/oauth/authorize?response_type=code&client_id=${import.meta.env.VITE_KAKAO_REST_API_KEY}&redirect_uri=${import.meta.env.VITE_KAKAO_REDIRECT_URI}`;
 

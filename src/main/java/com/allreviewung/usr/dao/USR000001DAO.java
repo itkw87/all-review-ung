@@ -30,20 +30,27 @@ public interface USR000001DAO {
 
     /*
      * 회원 조회
+     * @param String
+     * @return USR00000101DTO
+     */
+    USR00000101DTO selectUser(String strParam);
+
+    /*
+     * SNS 회원 조회
      * @param USR00000101IN
      * @return USR00000101DTO
      */
-    USR00000101DTO selectUser(USR00000101IN inParam);
+    USR00000101DTO selectSnsUser(USR00000101IN inParam);
 
     /*
-     * 회원 조회
+     * 리프레시 토큰 변경
      * @param USR00000101IN
      * @return int
      */
     int updateRfrsTokn(USR00000101IN inParam);
 
     /*
-     * refreshToken 조회
+     * 리프레시 토큰 조회
      * @param USR00000101IN
      * @return USR00000101DTO
      */

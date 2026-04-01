@@ -1,5 +1,6 @@
 package com.allreviewung.usr.controller;
 
+import com.allreviewung.usr.dto.USR00000101DTO;
 import com.allreviewung.usr.service.USR000001SVC;
 import com.allreviewung.usr.vo.USR00000101IN;
 import jakarta.validation.Valid;
@@ -43,11 +44,23 @@ public class USR000001CTL {
         }
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody USR00000101IN inParam) {
+        log.info("[CTL] 일반 로그인 시도 - email: {}", inParam.getEmil());
+
+        // 서비스한테 "야, 로그인 처리해와!"라고 시킴
+        Map<String, String> result = svcUSR000001.login(inParam);
+
+        // 성공하면 결과(토큰들)를 담아서 200 OK 뽷!
+        return ResponseEntity.ok(result);
+    }
+
+
     @GetMapping("/kakao/login")
     public ResponseEntity<?> kakaoLogin(@RequestParam("code") String code) {
         log.info("[CTL] 카카오 로그인 시도 - code: {}", code);
 
-        Map<String, Object> result = svcUSR000001.kakaoLogin(code);
+        Map<String, String> result = svcUSR000001.kakaoLogin(code);
 
         return ResponseEntity.ok(result);
     }

@@ -48,7 +48,15 @@
              )
     </insert>
 
-    <select id="selectUser" parameterType="com.allreviewung.usr.vo.USR00000101IN" resultType="com.allreviewung.usr.dto.USR00000101DTO">
+    <select id="selectSnsUser" parameterType="String" resultType="com.allreviewung.usr.dto.USR00000101DTO">
+        SELECT USER_ID
+             , EMIL
+             , NK_NM
+          FROM TB_COM_USER_M
+         WHERE SNS_ID = #{emil}
+    </select>
+
+    <select id="selectSnsUser" parameterType="com.allreviewung.usr.vo.USR00000101IN" resultType="com.allreviewung.usr.dto.USR00000101DTO">
         SELECT USER_ID
              , NK_NM
           FROM TB_COM_USER_M

@@ -76,7 +76,43 @@ public class USR000001IMP implements USR000001SVC {
 
     @Override
     @Transactional
-    public Map<String, Object> kakaoLogin(String code) {
+    public Map<String, String> login(USR00000101IN inParam) {
+        // 회원정보 조회
+        USR00000101DTO user = daoUSR000001.selectUser(inParam.getEmil());
+
+        // 비밀번호 불일치시
+        if (user == null || !passwordEncoder.matches(inParam.getPswd(), user.getPswd())) {
+            throw new ArvuBusinessException("아이디 또는 비밀번호가 일치하지 않습니다!", HttpStatus.UNAUTHORIZED);
+        }
+        
+        int userId = user.getUserId();
+        String email = user.getEmil();
+        String nickname = user.getNkNm();
+
+        String accessToken = tokenProvider.createAccessToken(userId, user.getNkNm());
+        String refreshToken = tokenProvider.createRefreshToken(userId);
+
+        // 리프레시 토큰 업데이트
+        USR00000101IN updateParam = new USR00000101IN();
+        updateParam.setUserId(userId);
+        updateParam.setRfrsTokn(refreshToken);
+        daoUSR000001.updateRfrsTokn(updateParam);
+
+        Map<String, String> result = new HashMap<>();
+        result.put("accessToken", accessToken);
+        result.put("refreshToken", refreshToken);
+
+        result.put("nickname", nickname);
+        result.put("email", email);
+        result.put("status", "SUCCESS");
+
+        return result;
+    }
+
+
+    @Override
+    @Transactional
+    public Map<String, String> kakaoLogin(String code) {
         log.info("[IMP] 카카오 로그인 code: {}", code);
 
         // 카카오 토큰 받기
@@ -126,7 +162,7 @@ public class USR000001IMP implements USR000001SVC {
         commonParam.setSnsId(kakaoId);
         commonParam.setSnsDvcd("KKO");
 
-        USR00000101DTO user = daoUSR000001.selectUser(commonParam);
+        USR00000101DTO user = daoUSR000001.selectSnsUser(commonParam);
 
         if (user != null) {
             userId = user.getUserId();
@@ -175,11 +211,10 @@ public class USR000001IMP implements USR000001SVC {
 
         log.info("[JWT] 리프레시 토큰 저장 완료. 카카오 고유 ID: {}", kakaoId);
 
-        Map<String, Object> result = new HashMap<>();
+        Map<String, String> result = new HashMap<>();
         result.put("accessToken", accessToken);
         result.put("refreshToken", refreshToken);
 
-        result.put("snsId", kakaoId);
         result.put("nickname", nickname);
         result.put("email", email);
 
