@@ -3,7 +3,7 @@
     <div class="max-w-md w-full bg-white rounded-[2.5rem] shadow-xl p-10 border border-gray-100">
       <div class="text-center mb-10">
         <h2 class="text-3xl font-black text-gray-800 mb-2">로그인 🦉</h2>
-        <p class="text-gray-500 font-medium text-sm">OO님의 정직한 리뷰를 들려주세요.</p>
+        <p class="text-gray-500 font-medium text-sm">회원님의 정직한 리뷰를 들려주세요.</p>
       </div>
 
       <form @submit.prevent="handleLogin" class="space-y-6">
@@ -31,7 +31,7 @@
 
         <button
             type="submit"
-            class="w-full bg-orange-600 text-white font-black py-4 rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200"
+            class="w-full bg-orange-600 text-white font-black py-4 rounded-2xl hover:bg-orange-700 transition-all shadow-lg shadow-orange-200 cursor-pointer"
         >
           로그인
         </button>
@@ -66,7 +66,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import api from '@/api/index.js';
+import api from '@/api';
 import kakaoLoginBtn from '@/assets/kakao_login.png'
 
 const router = useRouter();
@@ -98,7 +98,6 @@ const handleLogin = async () => {
     }
   } catch (error) {
     console.error('로그인 에러:', error);
-    // 백엔드에서 보낸 에러 메시지가 있으면 띄워주고, 없으면 기본 메시지!
     const errorMsg = error.response?.data?.message || '아이디 또는 비밀번호를 확인해주세요! 🦉';
     alert(errorMsg);
   }

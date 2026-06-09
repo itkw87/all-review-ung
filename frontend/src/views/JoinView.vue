@@ -81,7 +81,7 @@
 
 <script setup>
 import { ref, computed } from 'vue'
-import axios from 'axios'
+import api from '@/api';
 import { useRouter } from 'vue-router'
 
 const router = useRouter();
@@ -112,7 +112,7 @@ const handleJoin = async () => {
 
   try {
     // 백엔드로 데이터 전송
-    const response = await axios.post(`${API_BASE_URL}/api/user/join`, {
+    const response = await api.post('/api/user/join', {
       emil: email.value,
       nkNm: nickname.value,
       pswd: password.value
@@ -127,7 +127,6 @@ const handleJoin = async () => {
     // 에러 처리
     console.error('회원가입 실패:', error)
     const errorMsg = error.response?.data?.message || '회원가입에 실패했습니다. 잠시후 다시 시도해주시기 바랍니다.';
-    debugger;
     alert(errorMsg);
   }
 

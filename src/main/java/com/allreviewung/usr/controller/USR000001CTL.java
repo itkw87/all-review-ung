@@ -1,12 +1,10 @@
 package com.allreviewung.usr.controller;
 
-import com.allreviewung.usr.dto.USR00000101DTO;
 import com.allreviewung.usr.service.USR000001SVC;
 import com.allreviewung.usr.vo.USR00000101IN;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,7 +16,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
 import java.util.Map;
 
 @Slf4j
@@ -36,10 +33,10 @@ public class USR000001CTL {
         int result = svcUSR000001.insertUser(inParam);
 
         if (result > 0) {
-            // 성공 시 201 Created;
+            // 성공 시 201(Created)
             return ResponseEntity.status(HttpStatus.CREATED).body("회원가입 성공했습니다! 🦉");
         } else {
-            // 로직상 실패 시 400 Bad Request;
+            // 로직상 실패 시 400(Bad Request)
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("회원가입에 실패했습니다. 데이터를 확인해주시기 바랍니다.");
         }
     }
@@ -48,7 +45,7 @@ public class USR000001CTL {
     public ResponseEntity<?> login(@RequestBody USR00000101IN inParam) {
         log.info("[CTL] 일반 로그인 시도 - email: {}", inParam.getEmil());
 
-        // 서비스한테 "야, 로그인 처리해와!"라고 시킴
+        // 로그인
         Map<String, String> result = svcUSR000001.login(inParam);
 
         // 성공하면 결과(토큰들)를 담아서 200 OK 뽷!
@@ -60,6 +57,7 @@ public class USR000001CTL {
     public ResponseEntity<?> kakaoLogin(@RequestParam("code") String code) {
         log.info("[CTL] 카카오 로그인 시도 - code: {}", code);
 
+        // 카카오 로그인
         Map<String, String> result = svcUSR000001.kakaoLogin(code);
 
         return ResponseEntity.ok(result);
@@ -67,8 +65,11 @@ public class USR000001CTL {
 
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(@RequestBody Map<String, String> request) {
+        log.info("[CTL] 토큰 재발급 시도 - request: {}", request);
+
         String refreshToken = request.get("refreshToken");
 
+        // 토큰 재발급
         Map<String, String> result = svcUSR000001.reissueTokens(refreshToken);
 
         return ResponseEntity.ok(result);
@@ -76,6 +77,8 @@ public class USR000001CTL {
 
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@AuthenticationPrincipal UserDetails userDetails) {
+        log.info("[CTL] 로그아웃 시도 - userDetails: {}", userDetails);
+
         if (userDetails == null) {
             log.warn("[Logout:Unauthorized] 인증 정보 없이 로그아웃 시도");
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증 정보가 없습니다.");

@@ -43,7 +43,7 @@
 <script setup>
 import {RouterView, RouterLink, useRoute, useRouter} from 'vue-router';
 import {ref, watch} from 'vue';
-import axios from 'axios';
+import api from '@/api';
 
 const route = useRoute(); // 현재 주소 정보를 가져옴
 const router = useRouter();
@@ -68,7 +68,7 @@ const handleLogout = async () => {
   try {
     const token = localStorage.getItem('accessToken');
 
-    await axios.post('http://localhost:8080/api/user/logout', {}, {
+    await api.post('/api/user/logout', {}, {
       headers: {
         Authorization: `Bearer ${token}`
       }

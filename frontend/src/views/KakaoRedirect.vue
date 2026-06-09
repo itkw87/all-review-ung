@@ -11,7 +11,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import api from '@/api';
 
 const route = useRoute()
 const router = useRouter()
@@ -22,7 +22,7 @@ onMounted(async () => {
 
   if (code) {
     try {
-      const response = await axios.get(`http://localhost:8080/api/user/kakao/login?code=${code}`)
+      const response = await api.get(`/api/user/kakao/login?code=${code}`)
 
       const { accessToken, refreshToken, nickname, userId, email } = response.data;
       console.log('로그인 성공!', response.data)
